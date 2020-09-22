@@ -47,7 +47,7 @@ type Commandor(name) =
         match box message with
         | :? Message as msg ->       
             let processors = 
-                [1..1000]
+                [1..10000]
                 |> List.map(fun id ->  let properties = [| string(id) :> obj |]
                                        system.ActorOf(Props(typedefof<Processor>, properties)))
 
@@ -59,7 +59,7 @@ type Commandor(name) =
                     { StartNum = (uint64)i
                       Length = msg.Length }
 
-                processors.Item(rand.Next() % 1000) <! oneInput   
+                processors.Item(rand.Next() % 10000) <! oneInput   
                
         | _ ->  failwith "unknown message"
 
