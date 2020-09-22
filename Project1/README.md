@@ -32,7 +32,9 @@ dotnet fsi --langversion:preview proj1.fsx 1000000 4
 ### 2. Ratio of CPU time to Real
 CPU Time / Real Time = 0.406/0.190 = 2.13684
 
-### 2. Size of the work unit with best performance
+### 3. Size of the work unit with best performance
+For task with input N = 10000000, K = 4, the following table shows test result for different worker numbers.
+
 | #worker | CPU Time | Real Time | CPU / Real |
 |----|----|----|----|
 |1000|0.265|0.187|1.41711|
@@ -45,3 +47,14 @@ CPU Time / Real Time = 0.406/0.190 = 2.13684
 |10|0.406|0.190|2.1369|
 |5|0.375|0.189|1.98413|
 |1|0.281|0.187|1.50267|
+
+Based on the table, the best size of work unit is 12.
+
+### 4. Largest Problem size
+The largest problem size the script managed to solve is 10^7.
+
+## Environment
+- OS: Windows 10 Education, Version 2004
+- Processor: AMD Ryzen Threadripper 2920X 12-Core 3.50 GHz
+- RAM: 32.0 GB
+- System Type: 64-bit Operating System, x64-based processor
