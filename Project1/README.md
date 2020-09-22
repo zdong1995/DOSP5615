@@ -27,8 +27,21 @@ There is no solution for this pair of input.
 dotnet fsi --langversion:preview proj1.fsx 1000000 4
 
 # Real: 00:00:00.000, CPU: 00:00:00.000, GC gen0: 0, gen1: 0, gen2: 0
-# Real: 00:00:00.273, CPU: 00:00:00.342, GC gen0: 2, gen1: 0, gen2: 0
+# Real: 00:00:00.190, CPU: 00:00:00.406, GC gen0: 1, gen1: 0, gen2: 0
 ```
-### 2. Ration of CPU time to Real
+### 2. Ratio of CPU time to Real
+CPU Time / Real Time = 0.406/0.190 = 2.13684
 
 ### 2. Size of the work unit with best performance
+| #worker | CPU Time | Real Time | CPU / Real |
+|----|----|----|----|
+|1000|0.265|0.187|1.41711|
+|500|0.328|0.186|1.76344|
+|250|0.343|0.186|1.84409|
+|100|0.375|0.192|1.95313|
+|50|0.390|0.197|1.9797|
+|15|0.406|0.187|2.17112|
+|12|0.437|0.185|2.3379|
+|10|0.406|0.190|2.1369|
+|5|0.375|0.189|1.98413|
+|1|0.281|0.187|1.50267|
