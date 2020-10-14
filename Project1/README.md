@@ -1,4 +1,4 @@
-# DOSP Project 1
+# DOSP Project 1 - Perfect squares
 ### Group Member:
 - Zhang Dong, UFID: 69633983
 - Xiaobai Li, UFID: 31567109
