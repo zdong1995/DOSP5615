@@ -8,11 +8,6 @@ open Akka.Configuration
 open Akka.FSharp
 open Akka.TestKit
 
-let args : string array = fsi.CommandLineArgs |> Array.tail
-let numNodes = args.[0] |> int
-let topology = args.[1] |> string
-let algorithm = args.[2] |> string
-
 let mutable arr = Array2D.zeroCreate 0 0
 
 let configuration = 
@@ -39,28 +34,32 @@ let configuration =
             }
         }")
 
+let url = "akka.tcp://RemoteFSharp@localhost:8777/user/"
+
 let system = ActorSystem.Create("RemoteFSharp", configuration)
 
-let echoServer = 
-    spawn system "EchoServer"
+let echoServer (name : string) = 
+    spawn system name
     <| fun mailbox ->
-        let rec loop() =
+        let rec loop() count cache =
             actor {
                 let! message = mailbox.Receive()
                 let sender = mailbox.Sender()
                 match box message with
                 | :? string -> 
+                        let newcount = count + 1
+
                         printfn "super!"
                         sender <! sprintf "Hello %s remote" message
                         return! loop()
                 | _ ->  failwith "unknown message"
             } 
-        loop()
+        loop() 0 ""
 
 
 // let numNodes = 9
 
-let buildTopo topology =
+let buildTopo topology numNodes =
     let build2DGrid numNodes =
         // use ajacent matrix to represent the relation between nodes
         arr <- Array2D.zeroCreate numNodes numNodes
@@ -109,7 +108,6 @@ let buildTopo topology =
 
             // connect one random other node to each node
             let mutable connected = Array.create numNodes false
-            let mutable needToConnect = numNodes
 
             for i = 0 to numNodes - 1 do
                 if connected.[i] = false then
@@ -121,7 +119,7 @@ let buildTopo topology =
                     // generate random node index
                     let getRandom next list =
                         // get random element from list
-                        list |> Seq.sortBy(fun _ -> next())
+                        list |> Seq.sortBy (fun _ -> next())
                         
                     let r = System.Random()
                     if candidates.Length <> 0 then
@@ -131,3 +129,24 @@ let buildTopo topology =
                         arr.[randomNode, i] <- 1
                         connected.[i] <- true
                         connected.[randomNode] <- true
+
+let main() =
+    let args : string array = fsi.CommandLineArgs |> Array.tail
+    let numNodes = args.[0] |> int
+    let topology = args.[1] |> string
+    let algorithm = args.[2] |> string
+
+    // create actors
+    for i = 0 to numNodes - 1 do
+        let name = i |> string
+        echoServer name
+
+    buildTopo topology numNodes
+
+    match algorithm with
+        | "gossip" -> 
+            let startActor = system.ActorSelection(url + "actor0")
+            startActor <? "Test message."
+        | "push-sum" ->
+            //
+        
