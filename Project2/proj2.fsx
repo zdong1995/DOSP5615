@@ -13,7 +13,8 @@ let numNodes = args.[0] |> int
 let topology = args.[1] |> string
 let algorithm = args.[2] |> string
 
-let mutable arr = Array2D.init
+let mutable arr = Array2D.zeroCreate 0 0
+// let numNodes = 9
 
 let buildTopo topology =
     let build2DGrid numNodes =
@@ -43,10 +44,6 @@ let buildTopo topology =
             else
                 arr.[i, i + gridSize] <- 1
                 arr.[i, i - gridSize] <- 1
-    
-    let getRandom(r: Random) list =
-        // get random element from list
-        list |> Seq.sortBy(fun _ -> r.Next())
     
     match topology with
         | "full" ->
@@ -78,9 +75,15 @@ let buildTopo topology =
                         if connected.[j] = false && arr.[i, j] = 0 then
                             candidates <- List.append candidates [j]
                     // generate random node index
-                    let randomNode = candidates |> getRandom (Random()) |> Seq.head
-                    // link the random node as neighbor
-                    arr.[i, randomNode] <- 1
-                    arr.[randomNode, i] <- 1
-                    connected.[i] <- true
-                    connected.[randomNode] <- true
+                    let getRandom next list =
+                        // get random element from list
+                        list |> Seq.sortBy(fun _ -> next())
+                        
+                    let r = System.Random()
+                    if candidates.Length <> 0 then
+                        let randomNode = candidates |> getRandom (fun _ -> r.Next()) |> Seq.head
+                        // link the random node as neighbor
+                        arr.[i, randomNode] <- 1
+                        arr.[randomNode, i] <- 1
+                        connected.[i] <- true
+                        connected.[randomNode] <- true

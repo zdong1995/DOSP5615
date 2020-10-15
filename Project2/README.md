@@ -18,7 +18,49 @@ val b = System.currentTimeMillis; ..... start protocol println(b-System.currentT
 
 ## Implementation
 ### Topology
-Use Adjacency Matrix to build topology structure as shown below
+Use Adjacency Matrix to build topology structure.
+
+### How to test?
+Uncomment `let numNodes = 9`, then select all codes below and evaluate using F# Interactive(FSI).
+```
+val mutable arr : int [,] = []
+val numNodes : int = 9
+val buildTopo : topology:string -> unit
+
+> buildTopo "2D";;
+val it : unit = ()
+
+> arr;;
+val it : int [,] = [[0; 1; 0; 1; 0; 0; 0; 0; 0]
+                    [1; 0; 1; 0; 1; 0; 0; 0; 0]
+                    [0; 1; 0; 0; 0; 1; 0; 0; 0]
+                    [1; 0; 0; 0; 1; 0; 1; 0; 0]
+                    [0; 1; 0; 1; 0; 1; 0; 1; 0]
+                    [0; 0; 1; 0; 1; 0; 0; 0; 1]
+                    [0; 0; 0; 1; 0; 0; 0; 1; 0]
+                    [0; 0; 0; 0; 1; 0; 1; 0; 1]
+                    [0; 0; 0; 0; 0; 1; 0; 1; 0]]
+
+> buildTopo "imp2D";;
+val it : unit = ()
+
+> arr;;
+val it : int [,] = [[0; 1; 0; 1; 0; 1; 0; 0; 0]
+                    [1; 0; 1; 1; 1; 0; 0; 0; 0]
+                    [0; 1; 0; 0; 0; 1; 0; 0; 1]
+                    [1; 1; 0; 0; 1; 0; 1; 0; 0]
+                    [0; 1; 0; 1; 0; 1; 1; 1; 0]
+                    [1; 0; 1; 0; 1; 0; 0; 0; 1]
+                    [0; 0; 0; 1; 1; 0; 0; 1; 0]
+                    [0; 0; 0; 0; 1; 0; 1; 0; 1]
+                    [0; 0; 1; 0; 0; 1; 0; 1; 0]]
+
+> 
+
+```
+
+The following shows the node structure corresponding to Adjacency Matrix:
+
 #### Full
 Adjacency matrix all filled by 1, with size = number of nodes.
 
