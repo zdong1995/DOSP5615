@@ -73,11 +73,12 @@ Adjacency matrix all filled by 1, with size = number of nodes.
 #### imperfect 2D Grid
 Generate 2D grid and random generate extra edge to connect nodes.
 If the node number is odd number, there will be one node doesn't have extra edge.
+
 Example 1:
 ![](https://raw.githubusercontent.com/zdong1995/PicGo/master/img/%E6%88%AA%E5%B1%8F2020-10-15%2000.32.41.png)
 
 Example 2:
-![](https://raw.githubusercontent.com/zdong1995/PicGo/master/img/%E6%88%AA%E5%B1%8F2020-10-15%2000.32.41.png)
+![](https://raw.githubusercontent.com/zdong1995/PicGo/master/img/%E6%88%AA%E5%B1%8F2020-10-15%2001.02.12.png)
 
 
 ## Usage

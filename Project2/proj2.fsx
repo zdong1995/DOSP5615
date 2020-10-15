@@ -14,6 +14,50 @@ let topology = args.[1] |> string
 let algorithm = args.[2] |> string
 
 let mutable arr = Array2D.zeroCreate 0 0
+
+let configuration = 
+    ConfigurationFactory.ParseString(
+        @"akka {
+            log-config-on-start : on
+            stdout-loglevel : DEBUG
+            loglevel : ERROR
+            actor {
+                provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
+                debug : {
+                    receive : on
+                    autoreceive : on
+                    lifecycle : on
+                    event-stream : on
+                    unhandled : on
+                }
+            }
+            remote {
+                helios.tcp {
+                    port = 8777
+                    hostname = localhost
+                }
+            }
+        }")
+
+let system = ActorSystem.Create("RemoteFSharp", configuration)
+
+let echoServer = 
+    spawn system "EchoServer"
+    <| fun mailbox ->
+        let rec loop() =
+            actor {
+                let! message = mailbox.Receive()
+                let sender = mailbox.Sender()
+                match box message with
+                | :? string -> 
+                        printfn "super!"
+                        sender <! sprintf "Hello %s remote" message
+                        return! loop()
+                | _ ->  failwith "unknown message"
+            } 
+        loop()
+
+
 // let numNodes = 9
 
 let buildTopo topology =
