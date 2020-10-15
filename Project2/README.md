@@ -16,6 +16,12 @@ Print the amount of time it took to achieve convergence of the algo- rithm. Plea
 val b = System.currentTimeMillis; ..... start protocol println(b-System.currentTimeMillis)
 ```
 
+## Implementation
+### Topology
+Use Adjacency Matrix to build topology structure as shown below
+![](https://raw.githubusercontent.com/zdong1995/PicGo/master/img/%E6%88%AA%E5%B1%8F2020-10-14%2021.27.14.png)
+
+
 ## Usage
 To run the script, change your location to directory `Project2/`, using following command to test:
 ```shell
