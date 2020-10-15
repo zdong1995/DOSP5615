@@ -9,10 +9,9 @@ open Akka.FSharp
 open Akka.TestKit
 
 let mutable arr = Array2D.zeroCreate 0 0
-let mutable numNodes = 1
-// let args : string array = fsi.CommandLineArgs |> Array.tail
-// let mutable numNodes = args.[0] |> int
-// let mutable topology = args.[1] |> string
+let args : string array = fsi.CommandLineArgs |> Array.tail
+let mutable numNodes = args.[0] |> int
+let mutable topology = args.[1] |> string
 // let algorithm = args.[2] |> string
 
 let configuration = 
@@ -43,10 +42,19 @@ let url = "akka.tcp://RemoteFSharp@localhost:8777/user/"
 
 let system = ActorSystem.Create("RemoteFSharp", configuration)
 
-// let numNodes = 9
-let stopTime = 50
+// let stopTime = 50
 
-let echoServer (name : string) = 
+let mutable converged = false
+// terminated represented whether the node at index is terminated: 0 -> not terminated, 1 -> terminated
+let mutable terminated = Array.zeroCreate numNodes
+
+let getRandom next list =
+    // get random element from list
+    list |> Seq.sortBy (fun _ -> next())
+    
+let r = System.Random()
+
+let gossipWorker (name : string) = 
     spawn system name
     <| fun mailbox ->
         let rec loop count message =
@@ -56,26 +64,34 @@ let echoServer (name : string) =
                 match box message with
                 | :? string -> 
                         let newcount = count + 1
-                        // printfn "%s receive message from %s for %d times" name message newcount
-                        if count < stopTime then
-                            let curIdx = int name
-                            let r = System.Random()
-                            let mutable nextIdx = r.Next(0, numNodes)
-                            while arr.[curIdx, nextIdx] = 0 && curIdx <> nextIdx do
-                                nextIdx <- r.Next(0, numNodes)
-                            
-                            let nextName = nextIdx |> string
+                        let mutable validNeighbors = []
+                        let curIdx = int name
+                        // find possible neighbors which are not terminated
+                        for i = 0 to numNodes - 1 do
+                            // check connected node, skip current index and terminated index
+                            if arr.[curIdx, i] = 1 && i <> curIdx && terminated.[i] = 0 then
+                                validNeighbors <- List.append validNeighbors [i]
+                        
+                        // all neighbors are terminated
+                        if validNeighbors.Length = 0 then
+                            terminated.[curIdx] <- 1
+                            let boss = system.ActorSelection(url + "boss")
+                            // notice boss current actor terminated
+                            boss <? name |> ignore
+                        else
+                            let nextName = validNeighbors |> getRandom (fun _ -> r.Next()) |> Seq.head |> string
                             let nextNode = system.ActorSelection(url + nextName)
                             nextNode <? message |> ignore
-                        if count = 1 then
+
+                        if count = 10 then
                             let boss = system.ActorSelection(url + "boss")
+                            // notice boss current actor terminated
                             boss <? name |> ignore
+
                         return! loop newcount message
                 | _ ->  failwith "unknown message"
             } 
         loop 0 ""
-
-let mutable finish = false
 
 let boss =
     spawn system "boss"
@@ -87,10 +103,12 @@ let boss =
                 match box message with
                 | :? string -> 
                         printfn "%s finished" message
+                        let idx = message |> int
+                        
                         let newCount = count + 1
-                        if newCount = numNodes - 1 then
+                        if newCount = numNodes then
                             printfn "Converged! All actors finished"
-                            finish <- true
+                            converged <- true
                         return! loop newCount
                 | _ ->  failwith "unknown message"
             } 
@@ -154,11 +172,6 @@ let buildTopo topology numNodes =
                         if i <> j && connected.[j] = false && arr.[i, j] = 0 then
                             candidates <- List.append candidates [j]
                     // generate random node index
-                    let getRandom next list =
-                        // get random element from list
-                        list |> Seq.sortBy (fun _ -> next())
-                        
-                    let r = System.Random()
                     if candidates.Length <> 0 then
                         let randomNode = candidates |> getRandom (fun _ -> r.Next()) |> Seq.head
                         // link the random node as neighbor
@@ -168,15 +181,14 @@ let buildTopo topology numNodes =
                         connected.[randomNode] <- true
 
 let main() =
-    numNodes <- 16
     // build topology structure
-    buildTopo "2D" numNodes
+    buildTopo topology numNodes
     printfn "topology constructed"
 
     // create actors
     for i = 0 to numNodes - 1 do
         let name = string i
-        echoServer name
+        gossipWorker name
     printfn "actors generated"
 
     let timer = System.Diagnostics.Stopwatch.StartNew()
@@ -185,9 +197,10 @@ let main() =
     let startActor = system.ActorSelection(url + "0")
     startActor <? "Test message." |> ignore
 
-    while not finish do
+    while not converged do
         0 |> ignore
 
+    // printfn "%A" terminated
     timer.Stop()
     printfn "%f ms" timer.Elapsed.TotalMilliseconds
     printfn "Main program finish!"

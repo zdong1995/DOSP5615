@@ -83,30 +83,23 @@ Example 2:
 
 ## Usage
 To run the script, change your location to directory `Project2/`, using following command to test:
-### Temporary test
-Simple test with fixed input, not need to parse args.
+
+Currently only add support to Gossip algorithm. Use command `dotnet fsi --langversion:preview project2.fsx <nodeNumber> <topoType>` to run the program. Example:
 ```shell
-> dotnet fsi --langversion:preview proj2.fsx
+> dotnet fsi --langversion:preview project2.fsx 9 2D
 
 topology constructed
 actors generated
-0 finished
+4 finished
 2 finished
-6 finished
-10 finished
-14 finished
-9 finished
-13 finished
-15 finished
-11 finished
-3 finished
-7 finished
 1 finished
 5 finished
-12 finished
+7 finished
+6 finished
+3 finished
 8 finished
+0 finished
 Converged! All actors finished
-4 finished
-11.101800 ms
+14.934400 ms
 Main program finish!
 ```
