@@ -1,6 +1,6 @@
-#time "on"
 #r "nuget: Akka.FSharp" 
-#r "nuget: Akka.TestKit" 
+#r "nuget: Akka.TestKit"
+#r "nuget: Akka.Remote" 
 
 open System
 open Akka.Actor
@@ -9,10 +9,11 @@ open Akka.FSharp
 open Akka.TestKit
 
 let mutable arr = Array2D.zeroCreate 0 0
-let args : string array = fsi.CommandLineArgs |> Array.tail
-let mutable numNodes = args.[0] |> int
-let mutable topology = args.[1] |> string
-let algorithm = args.[2] |> string
+let mutable numNodes = 1
+// let args : string array = fsi.CommandLineArgs |> Array.tail
+// let mutable numNodes = args.[0] |> int
+// let mutable topology = args.[1] |> string
+// let algorithm = args.[2] |> string
 
 let configuration = 
     ConfigurationFactory.ParseString(
@@ -48,7 +49,7 @@ let stopTime = 50
 let echoServer (name : string) = 
     spawn system name
     <| fun mailbox ->
-        let rec loop() count message =
+        let rec loop count message =
             actor {
                 let! message = mailbox.Receive()
                 let sender = mailbox.Sender()
@@ -58,21 +59,21 @@ let echoServer (name : string) =
                         // printfn "%s receive message from %s for %d times" name message newcount
                         if count < stopTime then
                             let curIdx = int name
-                            let mutable nextIdx = curIdx
+                            let r = System.Random()
+                            let mutable nextIdx = r.Next(0, numNodes)
                             while arr.[curIdx, nextIdx] = 0 && curIdx <> nextIdx do
-                                let r = System.Random()
                                 nextIdx <- r.Next(0, numNodes)
                             
                             let nextName = nextIdx |> string
                             let nextNode = system.ActorSelection(url + nextName)
-                            nextNode <? message
+                            nextNode <? message |> ignore
                         if count = 1 then
                             let boss = system.ActorSelection(url + "boss")
-                            boss <? name
-                        return! loop() newcount message
+                            boss <? name |> ignore
+                        return! loop newcount message
                 | _ ->  failwith "unknown message"
             } 
-        loop() 0 ""
+        loop 0 ""
 
 let mutable finish = false
 
@@ -85,9 +86,9 @@ let boss =
                 let sender = mailbox.Sender()
                 match box message with
                 | :? string -> 
-                        // printfn "%s finished" message
+                        printfn "%s finished" message
                         let newCount = count + 1
-                        if newCount = numNodes then
+                        if newCount = numNodes - 1 then
                             printfn "Converged! All actors finished"
                             finish <- true
                         return! loop newCount
@@ -95,7 +96,6 @@ let boss =
             } 
         loop 0
 
-// let numNodes = 9
 let buildTopo topology numNodes =
     let build2DGrid numNodes =
         // use ajacent matrix to represent the relation between nodes
@@ -150,8 +150,8 @@ let buildTopo topology numNodes =
                 if connected.[i] = false then
                     let mutable candidates = []
                     // find possible neighbors
-                    for j in [0 .. i - 1] @ [i + 1 .. numNodes - 1] do // @: join list
-                        if connected.[j] = false && arr.[i, j] = 0 then
+                    for j = 0 to numNodes - 1 do // @: join list
+                        if i <> j && connected.[j] = false && arr.[i, j] = 0 then
                             candidates <- List.append candidates [j]
                     // generate random node index
                     let getRandom next list =
@@ -168,26 +168,29 @@ let buildTopo topology numNodes =
                         connected.[randomNode] <- true
 
 let main() =
-    numNodes <- 9
-    topology <- "2D"
+    numNodes <- 16
+    // build topology structure
+    buildTopo "2D" numNodes
+    printfn "topology constructed"
+
     // create actors
     for i = 0 to numNodes - 1 do
-        let name = "actor" + string i
+        let name = string i
         echoServer name
+    printfn "actors generated"
 
-    // build topology structure
-    buildTopo topology numNodes
-
+    let timer = System.Diagnostics.Stopwatch.StartNew()
     // start sending message
     // Gossip
-    let startActor = system.ActorSelection(url + "actor0")
-    startActor <? "Test message."
+    let startActor = system.ActorSelection(url + "0")
+    startActor <? "Test message." |> ignore
 
-    let wait = 0
     while not finish do
-        wait
-    
-    printfn "All finish!"
+        0 |> ignore
+
+    timer.Stop()
+    printfn "%f ms" timer.Elapsed.TotalMilliseconds
+    printfn "Main program finish!"
     (* TODO
     match algorithm with
         | "gossip" -> 
