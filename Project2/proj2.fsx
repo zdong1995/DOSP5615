@@ -38,27 +38,38 @@ let url = "akka.tcp://RemoteFSharp@localhost:8777/user/"
 
 let system = ActorSystem.Create("RemoteFSharp", configuration)
 
-let echoServer (name : string) = 
+// let numNodes = 9
+// let stopTime = 50
+let actor (name : string) = 
     spawn system name
     <| fun mailbox ->
-        let rec loop() count cache =
+        let rec loop() count message =
             actor {
                 let! message = mailbox.Receive()
                 let sender = mailbox.Sender()
                 match box message with
                 | :? string -> 
                         let newcount = count + 1
-
-                        printfn "super!"
-                        sender <! sprintf "Hello %s remote" message
-                        return! loop()
+                        // printfn "%s receive message from %s for %d times" name message newcount
+                        if count < stopTime then
+                            let curIdx = int name
+                            let mutable nextIdx = curIdx
+                            while arr.[curIdx, nextIdx] = 0 && curIdx <> nextIdx do
+                                let r = System.Random()
+                                nextIdx <- r.Next(0, numNodes)
+                            
+                            let nextName = nextIdx |> string
+                            let nextNode = system.ActorSelection(url + nextName)
+                            nextNode <? message
+                        if count = 1 then
+                            let boss = system.ActorSelection(url + "boss")
+                            boss <? name
+                        return! loop() newcount message
                 | _ ->  failwith "unknown message"
             } 
         loop() 0 ""
 
-
 // let numNodes = 9
-
 let buildTopo topology numNodes =
     let build2DGrid numNodes =
         // use ajacent matrix to represent the relation between nodes
@@ -138,15 +149,21 @@ let main() =
 
     // create actors
     for i = 0 to numNodes - 1 do
-        let name = i |> string
-        echoServer name
+        let name = "actor" + string i
+        actor name
 
+    // build topology structure
     buildTopo topology numNodes
 
+    // start sending message
+    // Gossip
+    let startActor = system.ActorSelection(url + "actor0")
+    startActor <? "Test message."
+
+    (* TODO
     match algorithm with
         | "gossip" -> 
-            let startActor = system.ActorSelection(url + "actor0")
-            startActor <? "Test message."
+            
         | "push-sum" ->
             //
-        
+    *)
