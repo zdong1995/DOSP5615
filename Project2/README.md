@@ -26,7 +26,7 @@ Adjacency matrix all filled by 1, with size = number of nodes.
 ![](https://raw.githubusercontent.com/zdong1995/PicGo/master/img/%E6%88%AA%E5%B1%8F2020-10-14%2023.34.08.png)
 
 #### 2D Grid
-![](https://raw.githubusercontent.com/zdong1995/PicGo/master/img/%E6%88%AA%E5%B1%8F2020-10-14%2021.27.14.png)
+![](https://raw.githubusercontent.com/zdong1995/PicGo/master/img/%E6%88%AA%E5%B1%8F2020-10-15%2000.38.47.png)
 
 #### imperfect 2D Grid
 Generate 2D grid and random generate extra edge to connect nodes.
