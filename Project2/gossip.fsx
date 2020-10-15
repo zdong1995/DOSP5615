@@ -10,8 +10,8 @@ open Akka.TestKit
 
 let mutable arr = Array2D.zeroCreate 0 0
 let args : string array = fsi.CommandLineArgs |> Array.tail
-let mutable numNodes = args.[0] |> int
-let mutable topology = args.[1] |> string
+let numNodes = args.[0] |> int
+let topology = args.[1] |> string
 let algorithm = args.[2] |> string
 
 let configuration = 
@@ -168,8 +168,6 @@ let buildTopo topology numNodes =
                         connected.[randomNode] <- true
 
 let main() =
-    numNodes <- 9
-    topology <- "2D"
     // create actors
     for i = 0 to numNodes - 1 do
         let name = "actor" + string i
