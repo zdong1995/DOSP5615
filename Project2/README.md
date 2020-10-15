@@ -3,7 +3,7 @@
 - Zhang Dong, UFID: 69633983
 - Xiaobai Li, UFID: 31567109
 ## Project Requirement
-Implement gossip and push sum algorithm for different types of topologyes. 
+Implement gossip and push sum algorithms for different types of topologyes. 
 ### Input:
 The input provided (as command line to your project2) will be of the form:
 `project2 numNodes topology algorithm`
