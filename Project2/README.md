@@ -63,13 +63,61 @@ Example 1:
 Example 2:
 ![](https://github.com/zdong1995/DOSP5615/blob/master/Project2/img/topo_imp2d_2.png)
 
+### 3.2 Actor System
+In the tutorial snippets we find remote actors is very useful. Akka remoting is designed for communication in a peer-to-peer fashion. Message sends to actors that are actually in the sending actor system do not get delivered via the remote actor ref provider. They’re delivered directly, by the local actor ref provider. Thus we decided to use remote actors for message communication in this project.
 
-## Result
-### Performance
+In Akka, used `system.ActorSelection(url)` to look up an actor and send message directly. In this project, we use three kind of remote actors:
+- **Gossip Worker **: Remote actor that sending message and converged by Gossip algorithm, the message received is string of message.
+- **Push-Sum Worker**: Remote actor that sending message and converged by Push-Sum algorithm, the message received is string of (s, w) pair.
+- **Boss**: Remote actor that only listening to the workers to record the number of terminated worker, in order to determine the convergence of communication system. Each time when worker reach terminate condition, it will send message to boss and mark itself as terminated. When the number of message boss received is equal to number of nodes, the boss will mark the program as converged and stop the simulation.
+
+### 3.3 Gossip Algorithm
+For the gossip algorithm, each actor selects a random neighbor and send the message. It stops transmitting once it has heard the message 10 times.
+Thus we will maintain one `count` for each actor and update count when received new message from neighbor.  The algorithm will execute as following:
+- Increment `count` when receive new message
+- Find list all possible neighbors
+- Generate one random neighbor and send message
+- When  `count` reached 10, send message to boss to indicate current actor is terminated
+
+There will be some cases that could’t be converged based on this algorithm. The reason we analyzed is there may have some nodes whose neighbors are all terminated thus it cannot received enough message to reach 10 to terminate. Thus we improved the algorithm by maintaining a status array of termination and adding another termination condition:
+- Find list all possible neighbors that are not terminated
+- If list is empty, which means all neighbors are terminated, then current actor will also terminate, sent message to boss
+
+This fixed most of the cases in the simulation. However I think there is still some tricky points here. The global termination status array will be modified by difference threads (actors), but the termination condition check will be asynchronous applied. There may be some condition that the neighbors of current node should marked to terminated by another condition, but the current node retrieve the status array before updates. Thus current node will still possibly send message to that nodes, but eventually current node will reach termination.
+
+### 3.4 Push-Sum Algorithm
+In Push-Sum algorithm, each actor receive one pair of `(s, w)` and update with the `(s, w)` of each. Then decrease by half and send half to another neighbor. It is a process to averaging `s/w`, when the difference between previous and current `s/w` is smaller than threshold consecutive 3 times, then we will terminate the nodes. This process is much easier and we don’t need to maintain a status array as Gossip algorithm. The tricky part is if we still use the boss to count number of terminated actors, then it will incorrectly converge before real convergence. Because if the difference can’t be lower than threshold consecutive 3 times, we will reset the count of actor to 0. Thus each time the count of actor reach 3, it will send message to boss, which will occur duplicate termination message to count.
+
+Thus we define a boolean variable for actors to recursively parse, which is default set as `false`. Each time we update the current state based on last state. If the actor terminated, we just need to parse `true` to next recursion. Only at the condition that `count = 3 && not terminate`, we will send message to boss, which fixed this case.
+
+## 4. Result
+We have roughly test several input for the simulation and make plots as following:
+
+#### Test Environment
+- OS: Windows 10 Education, Version 2004
+- Processor: AMD Ryzen Threadripper 2920X 12-Core 3.50 GHz
+- RAM: 32.0 GB
+- System Type: 64-bit Operating System, x64-based processor
+
+### 4.1 Performance
 ![](https://github.com/zdong1995/DOSP5615/blob/master/Project2/img/performance.png)
 
-### Scalibility
+#### Gossip
+The result Gossip algorithm is similar as expected. The linear topology structure will take the longest time to communicating.  2D and imperfect 2D are similar. To our surprise, the fully connected network is not as good as we think. After 200 nodes, it even became worse than linear topology.
+
+The reason we think is because there are so many neighbors for each node in the fully connected topology. If the number of nodes is not so large, the random picking will not have much negative impact. In the low number range, more neighbor means more opportunities to send messages to increase number that heard this rumor. It will speed up the communication process.
+
+However, if the number of node is large, the random picking will became very low-efficiency. Just imagine if we can only choice to talk to 2 or 4 people, it will be surely easier to reach 10 times threshold to have choice to talk to 100 people. The fully-connected topology increase the degree of freedom, which statistically make the distribution more average, thus it will take longer for the average level to reach threshold.
+
+#### Push-Sum
+The Push-Sum increases the gap between linear structure and other topologies. The fully-connected topology works best in small range of node number. It satisfied our expectations. If we have high degree of freedom, we will be easier to generalize the value of `(s/w)` to be much easier to make difference smaller to reach threshold. It is not like the Gossip algorithm to increase count to converge. The whole averaging process will benefit from more connection. We can also see that imperfect 2D grid has one more freedom than 2D grid, which become faster than 2D grid. For large number of nodes, full network becomes low-performance due to large amount need to generalize for each node, thus it will exponentially increasing as the graph shown below.
+
+### 4.2 Scalibility
 ![](https://github.com/zdong1995/DOSP5615/blob/master/Project2/img/scalibility.png)
 
-### Compare of Gossip and Push-Sum Algorithm
+Two algorithm both have good scalibility in 2D grid and impefect 2D grid. Full network and line spent much longer number time to converge after 200 nodes. The largest scale we tested is 40000 node for Gossip algorithm in 2D grid, which took 57 minutes to converge. Due to the limit of time and device, we didn't test so much for large scale.
+
+### 4.3 Compare of Gossip and Push-Sum Algorithm
 ![](https://github.com/zdong1995/DOSP5615/blob/master/Project2/img/Compare.png)
+
+As the scale increasing, Gossip algorithm shows better performance than Push-Sum algorithm. The performance dependency on these two algorithm shows worst performance for line, then full network, which are much worse than 2D systems. As the long convergence time, we didn't have further test for line and full network.
