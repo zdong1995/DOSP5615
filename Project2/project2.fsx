@@ -12,7 +12,7 @@ let mutable arr = Array2D.zeroCreate 0 0
 let args : string array = fsi.CommandLineArgs |> Array.tail
 let mutable numNodes = args.[0] |> int
 let mutable topology = args.[1] |> string
-// let algorithm = args.[2] |> string
+let algorithm = args.[2] |> string
 
 let configuration = 
     ConfigurationFactory.ParseString(
@@ -92,6 +92,53 @@ let gossipWorker (name : string) =
                 | _ ->  failwith "unknown message"
             } 
         loop 0 ""
+
+let splitLine = (fun (line : string) -> Seq.toArray (line.Split ','))
+
+let pushSumWorker (name : string) = 
+    spawn system name
+    <| fun mailbox ->
+        let rec loop (prevS:float) (prevW:float) (count:int) =
+            actor {
+                let! message = mailbox.Receive()
+                let sender = mailbox.Sender()
+                match box message with
+                | :? String ->
+                        let pair = splitLine message
+                        let mutable newS = prevS + float pair.[0]
+                        let mutable newW = prevW + float pair.[1]
+                        let diff = prevS / prevW - newS / newW
+                        let curIdx = int name
+                        // printfn "server %s reach convergence %d times, (s, w) is (%f, %f) " name count newS newW
+                        // dermine whether consecutive 3 times converge
+                        let mutable newCount = 0
+                        if diff < 10.0 ** (-10.0) then
+                            newCount <- count + 1
+                        // if false, can not be consecutive 3 times -> rest count to 0
+
+                        // find possible neighbors which are not terminated
+                        let mutable validNeighbors = []
+                        for i = 0 to numNodes - 1 do
+                            // check connected node, skip current index and terminated index
+                            if arr.[curIdx, i] = 1 && i <> curIdx then
+                                validNeighbors <- List.append validNeighbors [i]
+                        
+                        let nextName = validNeighbors |> getRandom (fun _ -> r.Next()) |> Seq.head |> string
+                        let nextNode = system.ActorSelection(url + nextName)
+                        newS <- newS / 2.0
+                        newW <- newW / 2.0
+                        nextNode <? string newS + "," + string newW |> ignore
+
+                        if newCount = 3 then
+                            let boss = system.ActorSelection(url + "boss")
+                            // notice boss current actor terminated
+                            boss <? name |> ignore
+                            terminated.[curIdx] <- 1
+
+                        return! loop newS newW newCount
+                | _ ->  failwith "unknown message"
+            } 
+        loop (float (int name)) 1.0 0 // initial: s = idx of node, w = 1
 
 let boss =
     spawn system "boss"
@@ -180,22 +227,34 @@ let buildTopo topology numNodes =
                         connected.[i] <- true
                         connected.[randomNode] <- true
 
+let genNodes numNodes algorithm =
+    // create actors
+    for i = 0 to numNodes - 1 do
+        let name = string i
+        match algorithm with
+        | "gossip" ->
+            gossipWorker name
+        | "push-sum" ->
+            pushSumWorker name
+
+    printfn "actors generated"
+
 let main() =
     // build topology structure
     buildTopo topology numNodes
     printfn "topology constructed"
 
-    // create actors
-    for i = 0 to numNodes - 1 do
-        let name = string i
-        gossipWorker name
-    printfn "actors generated"
+    genNodes numNodes algorithm
 
     let timer = System.Diagnostics.Stopwatch.StartNew()
     // start sending message
     // Gossip
     let startActor = system.ActorSelection(url + "0")
-    startActor <? "Test message." |> ignore
+    match algorithm with
+        | "gossip" -> 
+            startActor <? "Test message." |> ignore
+        | "push-sum" ->
+            startActor <? "1.0,1.0" |> ignore
 
     while not converged do
         0 |> ignore
@@ -204,12 +263,5 @@ let main() =
     timer.Stop()
     printfn "%f ms" timer.Elapsed.TotalMilliseconds
     printfn "Main program finish!"
-    (* TODO
-    match algorithm with
-        | "gossip" -> 
-            
-        | "push-sum" ->
-            //
-    *)
 
 main()

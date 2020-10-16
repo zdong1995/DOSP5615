@@ -84,9 +84,9 @@ Example 2:
 ## Usage
 To run the script, change your location to directory `Project2/`, using following command to test:
 
-Currently only add support to Gossip algorithm. Use command `dotnet fsi --langversion:preview project2.fsx <nodeNumber> <topoType>` to run the program. Example:
+Use command `dotnet fsi --langversion:preview project2.fsx <nodeNumber> <topoType> <algorithm>` to run the program. Example:
 ```shell
-> dotnet fsi --langversion:preview project2.fsx 9 2D
+> dotnet fsi --langversion:preview project2.fsx 9 2D gossip
 
 topology constructed
 actors generated
