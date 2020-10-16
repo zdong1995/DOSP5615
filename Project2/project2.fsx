@@ -57,7 +57,7 @@ let r = System.Random()
 let gossipWorker (name : string) = 
     spawn system name
     <| fun mailbox ->
-        let rec loop count message =
+        let rec loop count =
             actor {
                 let! message = mailbox.Receive()
                 let sender = mailbox.Sender()
@@ -88,10 +88,10 @@ let gossipWorker (name : string) =
                             // notice boss current actor terminated
                             boss <? name |> ignore
 
-                        return! loop newcount message
+                        return! loop newcount
                 | _ ->  failwith "unknown message"
             } 
-        loop 0 ""
+        loop 0
 
 let splitLine = (fun (line : string) -> Seq.toArray (line.Split ','))
 
@@ -150,8 +150,6 @@ let boss =
                 match box message with
                 | :? string -> 
                         printfn "%s finished" message
-                        let idx = message |> int
-                        
                         let newCount = count + 1
                         if newCount = numNodes then
                             printfn "Converged! All actors finished"
