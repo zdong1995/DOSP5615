@@ -98,7 +98,7 @@ let splitLine = (fun (line : string) -> Seq.toArray (line.Split ','))
 let pushSumWorker (name : string) = 
     spawn system name
     <| fun mailbox ->
-        let rec loop (prevS:float) (prevW:float) (count:int) =
+        let rec loop (prevS:float) (prevW:float) (count:int) (terminate:bool)=
             actor {
                 let! message = mailbox.Receive()
                 let sender = mailbox.Sender()
@@ -107,6 +107,7 @@ let pushSumWorker (name : string) =
                         let pair = splitLine message
                         let mutable newS = prevS + float pair.[0]
                         let mutable newW = prevW + float pair.[1]
+                        let mutable newTerminate = terminate
                         let diff = prevS / prevW - newS / newW
                         let curIdx = int name
                         // printfn "server %s reach convergence %d times, (s, w) is (%f, %f) " name count newS newW
@@ -115,30 +116,29 @@ let pushSumWorker (name : string) =
                         if diff < 10.0 ** (-10.0) then
                             newCount <- count + 1
                         // if false, can not be consecutive 3 times -> rest count to 0
-
                         // find possible neighbors which are not terminated
                         let mutable validNeighbors = []
                         for i = 0 to numNodes - 1 do
                             // check connected node, skip current index and terminated index
                             if arr.[curIdx, i] = 1 && i <> curIdx then
                                 validNeighbors <- List.append validNeighbors [i]
-                        
+
                         let nextName = validNeighbors |> getRandom (fun _ -> r.Next()) |> Seq.head |> string
                         let nextNode = system.ActorSelection(url + nextName)
                         newS <- newS / 2.0
                         newW <- newW / 2.0
                         nextNode <? string newS + "," + string newW |> ignore
-
-                        if newCount = 3 then
+                                
+                        if newCount = 3 && not terminate then
                             let boss = system.ActorSelection(url + "boss")
                             // notice boss current actor terminated
                             boss <? name |> ignore
-                            terminated.[curIdx] <- 1
+                            newTerminate <- true
 
-                        return! loop newS newW newCount
+                        return! loop newS newW newCount newTerminate
                 | _ ->  failwith "unknown message"
             } 
-        loop (float (int name)) 1.0 0 // initial: s = idx of node, w = 1
+        loop (float (int name)) 1.0 0 false// initial: s = idx of node, w = 1
 
 let boss =
     spawn system "boss"
