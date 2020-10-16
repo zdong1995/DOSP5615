@@ -65,20 +65,20 @@ The following shows the node structure corresponding to Adjacency Matrix:
 Adjacency matrix all filled by 1, with size = number of nodes.
 
 #### Line
-![](https://raw.githubusercontent.com/zdong1995/PicGo/master/img/%E6%88%AA%E5%B1%8F2020-10-14%2023.34.08.png)
+![](https://github.com/zdong1995/DOSP5615/blob/master/Project2/img/topo_line.png)
 
 #### 2D Grid
-![](https://raw.githubusercontent.com/zdong1995/PicGo/master/img/%E6%88%AA%E5%B1%8F2020-10-15%2000.38.47.png)
+![](https://github.com/zdong1995/DOSP5615/blob/master/Project2/img/topo_2d.png)
 
 #### imperfect 2D Grid
 Generate 2D grid and random generate extra edge to connect nodes.
 If the node number is odd number, there will be one node doesn't have extra edge.
 
 Example 1:
-![](https://raw.githubusercontent.com/zdong1995/PicGo/master/img/%E6%88%AA%E5%B1%8F2020-10-15%2000.32.41.png)
+![](https://github.com/zdong1995/DOSP5615/blob/master/Project2/img/topo_imp2D_1.png)
 
 Example 2:
-![](https://raw.githubusercontent.com/zdong1995/PicGo/master/img/%E6%88%AA%E5%B1%8F2020-10-15%2001.02.12.png)
+![](https://github.com/zdong1995/DOSP5615/blob/master/Project2/img/topo_imp2d_2.png)
 
 
 ## Usage
@@ -103,3 +103,12 @@ Converged! All actors finished
 14.934400 ms
 Main program finish!
 ```
+## Result
+### Performance
+![](https://github.com/zdong1995/DOSP5615/blob/master/Project2/img/performance.png)
+
+### Scalibility
+![](https://github.com/zdong1995/DOSP5615/blob/master/Project2/img/scalibility.png)
+
+### Compare of Gossip and Push-Sum Algorithm
+![](https://github.com/zdong1995/DOSP5615/blob/master/Project2/img/Compare.png)
