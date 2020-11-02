@@ -6,6 +6,7 @@ open System
 open Akka.Actor
 open Akka.Configuration
 open Akka.FSharp
+open FSharp.Core
 open System.Threading
 
 let configuration = 
@@ -32,14 +33,14 @@ let configuration =
             }
         }")
 
-let url = "akka.tcp://RemoteFSharp@localhost:8777/user/"
+let url = "akka.tcp://Pastry@localhost:8777/user/"
 
 // Construct the basic structures. 
 type Message =
-    |InitailizeNode of String * int
-    |Route of String * String * int
-    |Join of String*int
-    |UpdateRoutingTable of String[]
+    |InitializeNode of String * int
+    |RouteMsg of String * String * int
+    |JoinNode of String*int
+    |UpdateRoutingTable of int * String[]
     |Print
     |PassValue of String * int  
     |ShowResult 
@@ -50,11 +51,17 @@ let args : string array = fsi.CommandLineArgs |> Array.tail
 let mutable numNodes = args.[0] |> int
 let mutable numRequests = args.[1] |> int
 
+// Define the data structures to keep global information.
+let mutable indToIdMap : Map<int, String> = Map.empty
+let mutable idToIndMap : Map<String, int> = Map.empty
 let mutable nodeMap : Map<String, IActorRef> = Map.empty 
-let rand = Random()
-let clone i (arr:'T[,]) = arr.[i..i, *]|> Seq.cast<'T> |> Seq.toArray
 
-let system = ActorSystem.Create("RemoteFSharp", configuration)
+// Define the methods here.
+let rand = Random()
+let copyOneRow ind (arr: 'T[,]) = arr.[ind..ind, *] |> Seq.cast<'T> |> Seq.toArray
+
+// Create the actor system and define the actors.
+let system = ActorSystem.Create("Pastry", configuration)
 
 let boss (name : string) = 
     let mutable reqHopMap: Map<String, int> = Map.empty
@@ -65,7 +72,6 @@ let boss (name : string) =
                 let! message = mailbox.Receive()
                 match box message :?> Message with
                 | PassValue(sourceId, hops) ->
-                    // printfn "get a res (%s, %i) !" sourceId hops
                     if reqHopMap.ContainsKey sourceId then 
                         let hopNum = reqHopMap.TryFind sourceId
                         match hopNum with 
@@ -100,118 +106,110 @@ let node (name : string) =
     let mutable nodeId =""
     let mutable rowNum = 0
     let mutable colNum = 16 
+    let mutable leafSet : Set<String> = Set.empty
     let mutable routingTable: string[,] = Array2D.zeroCreate 0 0
     let mutable commonPrefixLength = 0
-    let mutable curRow = 0
-    let mutable leafSet : Set<String> = Set.empty
+    
     spawn system name
     <| fun mailbox ->
         let rec loop()  =
             actor { 
                 let! message = mailbox.Receive()
                 match box message :?> Message with
-                   | InitailizeNode(i,d)->
-                        nodeId <- i
+                   | InitializeNode(inputNodeId, d)->
+                        nodeId <- inputNodeId
                         rowNum <- d
                         routingTable <- Array2D.zeroCreate rowNum colNum
-               
-                        let mutable itr=0
-                        let number = Int32.Parse(nodeId, Globalization.NumberStyles.HexNumber)
-
-                        let mutable left = number
-                        let mutable right = number
-                
-                        while itr < 8 do 
-                           if left = 0 then
-                              left <- nodeMap.Count-1 //check
-                           leafSet <- leafSet.Add(left.ToString())
-                           itr <- itr + 1
-                           left <- left - 1
-                  
-                        while itr < 16 do
-                           if right = nodeMap.Count-1 then
-                              right <- 0
-                           leafSet <- leafSet.Add(right.ToString())
-                           itr <- itr + 1
-                           right <- right + 1
-
-                        // printfn "the node %s is initialized" nodeId
-                                              
-                   | Join(key, currentIndex) ->
+                              
+                        let curNodeInd = idToIndMap.Item(nodeId)
+                        let mutable leftInd = curNodeInd - 1
+                        let mutable rightInd = curNodeInd + 1
+                       
                         let mutable i = 0
-                        let mutable j = 0
-                        let mutable k = currentIndex
+                        while i < 8 do 
+                            if leftInd < 0 then 
+                               leftInd <- numNodes - 1
+                              
+                            let oneLeafId = indToIdMap.Item(leftInd)   
+                            leafSet <- leafSet.Add(oneLeafId)                               
+                            leftInd <- leftInd - 1
+                            i <- i + 1
 
-                        while key.[i] = nodeId.[i] do
+                        while i < 16 do
+                            if rightInd > numNodes - 1 then
+                                rightInd <- 0
+                            let oneLeafId = indToIdMap.Item(rightInd)     
+                            leafSet <- leafSet.Add(oneLeafId)
+                            rightInd <- rightInd + 1
+                            i <- i + 1   
+                                                                      
+                   | JoinNode(joinNodeId, startRowInd) ->
+                        let mutable i = 0
+                        let mutable curRowInd =  startRowInd
+                        while joinNodeId.[i] = nodeId.[i] do
                             i <- i + 1
                         commonPrefixLength <- i
-                        let mutable routingRow: string[] = Array.zeroCreate 0
-
-                        while k <= commonPrefixLength do
-                             routingRow <- clone k routingTable
-                             routingRow.[Int32.Parse(nodeId.[commonPrefixLength].ToString(), Globalization.NumberStyles.HexNumber)] <- nodeId                        
-                             // LXB test
-                             // printfn "after clone the routing table now is %A " routingTable
-                             // printfn "take out a row and want to send from %s is %A " nodeId routingRow
-                             // LXB
-                             let foundKey = nodeMap.TryFind key
-                             match foundKey with
-                             | Some x->
-                                x<! UpdateRoutingTable(routingRow)
+                                                        
+                        let mutable oneRow : string[] = Array.zeroCreate 0                                                      
+                        while curRowInd <= commonPrefixLength do 
+                            oneRow <- copyOneRow curRowInd routingTable                                                                                                                                       
+                            oneRow.[Int32.Parse(nodeId.[commonPrefixLength].ToString(), Globalization.NumberStyles.HexNumber)] <- nodeId                   
+                            
+                            let findJoinNode = nodeMap.TryFind joinNodeId
+                            match findJoinNode with
+                             | Some joinNode->
+                                joinNode <! UpdateRoutingTable(curRowInd, oneRow)
                                 ()
-                             | None -> printfn "Key does not exist in the map!"
+                             | None -> printfn "Error! The join node could nof be found in node map"
 
-                             k <- k+1
+                            curRowInd <- curRowInd + 1
 
-                        // printfn "the node %s has joined!" nodeId
-
-                        let rtrow = commonPrefixLength
-                        let rtcol = Int32.Parse(key.[commonPrefixLength].ToString(), Globalization.NumberStyles.HexNumber)
-                        if isNull routingTable.[rtrow, rtcol] then
-                            routingTable.[rtrow, rtcol] <- key
+                        let rowInd = commonPrefixLength
+                        let colInd = Int32.Parse(joinNodeId.[commonPrefixLength].ToString(), Globalization.NumberStyles.HexNumber)
+                        
+                        if isNull routingTable.[rowInd, colInd] then
+                            routingTable.[rowInd, colInd] <- joinNodeId
                         else
-                            let temp = routingTable.[rtrow, rtcol]
-                            let final = nodeMap.TryFind temp
+                            let newStartNode = routingTable.[rowInd, colInd]
+                            let findNewStarter = nodeMap.TryFind newStartNode
 
-                            match final with
-                            | Some x ->
-                                x<!Join(key, k)
-                            | None ->printfn "Key does not exist in the map "    
+                            match findNewStarter with
+                            | Some newStarter ->
+                                newStarter <! JoinNode(joinNodeId, commonPrefixLength+1)
+                            | None -> printfn "Error! This node does not exist in the map! "
 
-                    | UpdateRoutingTable(row: String[])->
-                        routingTable.[curRow, *] <- row
-                        // LXB test
-                        // printfn "for node %s now the routing table is %A" nodeId routingTable
-                        // LXB
-                        curRow <- curRow + 1         
-                    
-                    | Route(key, source, hops) ->
-                        if nodeId = key then
+                    | UpdateRoutingTable(rowInd, row)->
+                        routingTable.[rowInd, *] <- row
+                                                                
+                    | RouteMsg(keyId, sourceId, hops) ->
+                        if nodeId = keyId then
+                            // printfn "this case happen and will pass (%s , %i)" sourceId hops 
                             let boss = system.ActorSelection(url + "boss")
-                            boss <! PassValue(source, hops)
+                            boss <! PassValue(sourceId, hops)
 
-                        elif leafSet.Contains(key) then
-                            let nextNode = nodeMap.Item(key)
-                            nextNode <! Route(key, source, hops+1)
+                        elif leafSet.Contains(keyId) then
+                            let nextNode = nodeMap.Item(keyId)
+                            nextNode <! RouteMsg(keyId, sourceId, hops+1)
                               
                         else
                             let mutable i = 0
-                            let mutable j = 0
-                            while key.[i] = nodeId.[i] do
+                            while keyId.[i] = nodeId.[i] do
                                 i<- i+1
                             commonPrefixLength <- i
                             let mutable rtrow = commonPrefixLength
-                            let mutable rtcol = Int32.Parse(key.[commonPrefixLength].ToString(), Globalization.NumberStyles.HexNumber)
+                            let mutable rtcol = Int32.Parse(keyId.[commonPrefixLength].ToString(), Globalization.NumberStyles.HexNumber)
                             if isNull routingTable.[rtrow, rtcol] then
                                 rtcol <- 0
 
-                            nodeMap.Item(routingTable.[rtrow, rtcol]) <! Route(key, source, hops+1)
+                            nodeMap.Item(routingTable.[rtrow, rtcol]) <! RouteMsg(keyId, sourceId, hops+1)
                             
                     
-                        | Print ->
-                          printfn "Routing table of node %s is \n%A" nodeId routingTable      
+                    | Print ->
+                        let ind = idToIndMap.Item(nodeId)
+                        printfn "the routing table of (%i , %s) is %A" ind nodeId routingTable
+                        Thread.Sleep 100    
                         
-                        | _-> return! loop()   
+                    | _-> return! loop()   
                 return! loop()               
             }
         loop()
@@ -221,68 +219,57 @@ let node (name : string) =
 let numDigits = Math.Log(numNodes |> float, 16.0) |> ceil |> int
 let multiply text times = String.replicate times text
 printfn "Network construction initiated"
-let mutable nodeId = ""
+let mutable curNodeId = ""
 let mutable hexNum = ""
 let mutable len = 0
-nodeId <- multiply "0" numDigits
 
-let mutable startNode = node nodeId
-startNode <! InitailizeNode(nodeId, numDigits)
-nodeMap <- nodeMap.Add(nodeId, startNode)
-
-for i in [1.. numNodes-1] do
-    if i = numNodes / 4 then
-        printfn "The network is 25 percent done"
-    elif i = numNodes / 2 then
-        printfn "The network is 50 percent done"
-    elif i = numNodes*(3/4) then
-        printfn "The network is 75 percent done"
-
-    hexNum <- i.ToString("X")
+for ind in [0..numNodes-1] do
+    hexNum <- ind.ToString("X")
     len <- hexNum.Length
-    nodeId <-  multiply "0" (numDigits-len) + hexNum
-    let newNode = node nodeId
-    newNode <! InitailizeNode(nodeId, numDigits)
-    nodeMap <- nodeMap.Add(nodeId, newNode)
-    // nodeMap |> Map.toSeq |> Seq.length |> printfn "the size of nodemap is %i"
-    let temp = multiply "0" numDigits
-    let final = nodeMap.Item temp
-    final <! Join(nodeId, 0)
+    curNodeId <- multiply "0" (numDigits-len) + hexNum
+    indToIdMap <- indToIdMap.Add(ind, curNodeId)
+    idToIndMap <- idToIndMap.Add(curNodeId, ind)    
+    // printfn "the node ( %i, %s ) generated" ind curNodeId
+
+let startNode = node "0"
+let startNodeId = indToIdMap.Item(0)
+startNode <! InitializeNode(startNodeId, numDigits)
+nodeMap <- nodeMap.Add(startNodeId, startNode)
+
+for ind in [1.. numNodes-1] do
+    if ind = numNodes / 2 then
+        printfn "The network is 50 percent done"
+   
+    curNodeId <- indToIdMap.Item(ind)
+    let curNode = node curNodeId
+    nodeMap <- nodeMap.Add(curNodeId, curNode) 
+    curNode <! InitializeNode(curNodeId, numDigits)
+    startNode <! JoinNode(curNodeId, 0)
+       
     Thread.Sleep 5
     
 Thread.Sleep 1000
 printfn "Network is now built"
       
-let actorsArray = nodeMap |> Map.toSeq |> Seq.map fst |> Seq.toArray
+printfn "Now start to processing the requests."
+let calculator = boss "boss"
+let mutable roundNum = 1
+while roundNum <= numRequests do
+    for sourceInd in [0..numNodes-1] do
+        let sourceId = indToIdMap.Item(sourceInd)
+        let sourceNode = nodeMap.Item(sourceId)
+        let mutable desInd = rand.Next() % numNodes        
+        while desInd = sourceInd do
+            desInd <- rand.Next() % numNodes        
+        let mutable desId = indToIdMap.Item(desInd)    
+        sourceNode <! RouteMsg(desId, sourceId, 0)
+    printfn "Now all the node send %i requests" roundNum  
+    roundNum <- roundNum + 1
+    Thread.Sleep 10
 
-// LXB test the actors 
-// for i in actorsArray do
-//     printfn "the actor array has %s" i
-//     let actor = nodeMap.Item i
-//     printfn "and the correspond actor is %A" actor
-//     actor <! Print
-
-printfn "Processing requests" 
-
-let calculator = boss "boss" 
-let mutable k = 1
-let mutable destinationId = ""
-let mutable ctr = 0
-while k <= numRequests do
-    for sourceId in actorsArray do
-        ctr <- ctr + 1
-        destinationId <- sourceId
-        while destinationId = sourceId do
-            destinationId <-  actorsArray.[rand.Next actorsArray.Length]
-        let temp = nodeMap.Item sourceId
-        temp <! Route(destinationId, sourceId, 0)
-        Thread.Sleep 5
-
-    printfn "Each peer performed %i requests" k
-    k <- k + 1
-    
 Thread.Sleep 1000
-
+printfn "The requests are processed"
+    
 calculator <! ShowResult
 
 
