@@ -44,8 +44,7 @@ type Message =
     |Print
     |PassValue of String * int  
     |ShowResult 
-       
-          
+                 
 // Input the information.
 let args : string array = fsi.CommandLineArgs |> Array.tail
 let mutable numNodes = args.[0] |> int
@@ -59,6 +58,12 @@ let mutable nodeMap : Map<String, IActorRef> = Map.empty
 // Define the methods here.
 let rand = Random()
 let copyOneRow ind (arr: 'T[,]) = arr.[ind..ind, *] |> Seq.cast<'T> |> Seq.toArray
+
+let standardFrom oriNodeId : string = 
+    let mutable newNodeId = oriNodeId
+    while String.length newNodeId < 8 do
+          newNodeId <- ("0" + newNodeId)
+    newNodeId
 
 // Create the actor system and define the actors.
 let system = ActorSystem.Create("Pastry", configuration)
@@ -86,7 +91,6 @@ let boss (name : string) =
                 | ShowResult -> 
                     let averageHop = reqHopMap |> Map.toSeq |> Seq.map snd |> Seq.toArray
 
-                    // LXB test
                     let mutable sum = 0.0
                     printfn "the length of the array is : %d " averageHop.Length
                     for i in [0..numNodes-1] do
@@ -95,7 +99,7 @@ let boss (name : string) =
 
                     let totalReqNum = double(numNodes * numRequests)
                     let res =  sum / totalReqNum
-                    printfn "the ave of this algo is %f ! " res
+                    printfn "the ave of this algo is %f " res
                 
                 | _-> return! loop()
                 return! loop() 
@@ -108,17 +112,16 @@ let node (name : string) =
     let mutable colNum = 16 
     let mutable leafSet : Set<String> = Set.empty
     let mutable routingTable: string[,] = Array2D.zeroCreate 0 0
-    let mutable commonPrefixLength = 0
-    
+    let mutable commonPrefixLength = 0    
     spawn system name
     <| fun mailbox ->
         let rec loop()  =
             actor { 
                 let! message = mailbox.Receive()
                 match box message :?> Message with
-                   | InitializeNode(inputNodeId, d)->
+                   | InitializeNode(inputNodeId, digitNum)->
                         nodeId <- inputNodeId
-                        rowNum <- d
+                        rowNum <- digitNum
                         routingTable <- Array2D.zeroCreate rowNum colNum
                               
                         let curNodeInd = idToIndMap.Item(nodeId)
@@ -215,25 +218,24 @@ let node (name : string) =
         loop()
             
 
-
-let numDigits = Math.Log(numNodes |> float, 16.0) |> ceil |> int
-let multiply text times = String.replicate times text
+// let numDigits = Math.Log(numNodes |> float, 16.0) |> ceil |> int
+// let multiply text times = String.replicate times text
 printfn "Network construction initiated"
 let mutable curNodeId = ""
 let mutable hexNum = ""
 let mutable len = 0
 
+let oneSeg = uint32(0xFFFFFFFF) / uint32(numNodes)
 for ind in [0..numNodes-1] do
-    hexNum <- ind.ToString("X")
-    len <- hexNum.Length
-    curNodeId <- multiply "0" (numDigits-len) + hexNum
+    curNodeId <- (uint32(ind) * oneSeg).ToString("X") 
+    curNodeId <- standardFrom curNodeId
     indToIdMap <- indToIdMap.Add(ind, curNodeId)
     idToIndMap <- idToIndMap.Add(curNodeId, ind)    
     // printfn "the node ( %i, %s ) generated" ind curNodeId
 
 let startNode = node "0"
 let startNodeId = indToIdMap.Item(0)
-startNode <! InitializeNode(startNodeId, numDigits)
+startNode <! InitializeNode(startNodeId, 8)
 nodeMap <- nodeMap.Add(startNodeId, startNode)
 
 for ind in [1.. numNodes-1] do
@@ -243,9 +245,8 @@ for ind in [1.. numNodes-1] do
     curNodeId <- indToIdMap.Item(ind)
     let curNode = node curNodeId
     nodeMap <- nodeMap.Add(curNodeId, curNode) 
-    curNode <! InitializeNode(curNodeId, numDigits)
-    startNode <! JoinNode(curNodeId, 0)
-       
+    curNode <! InitializeNode(curNodeId, 8)
+    startNode <! JoinNode(curNodeId, 0)       
     Thread.Sleep 5
     
 Thread.Sleep 1000
