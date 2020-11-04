@@ -29,5 +29,19 @@ close to the present node, according to the proximity metric. If no node is know
 The neighborhood set M contains the nodeIds and IP addresses of the |M| nodes that are closest (according the proximity metric) to the local node. The neighborhood set
 is not normally used in routing messages; it is useful in maintaining locality properties. The leaf set L is the set of nodes with the |L|/2 numerically closest larger nodeIds, and the |L|/2 nodes with numerically closest smaller nodeIds, relative to the present node’s nodeId. The leaf set is used during the message routing, as described below. Typical values for |L| and |M| are 2^b or 2*2^b.
 
+### 3.2 Routing
+Given a message, the node first checks to see if the key falls within the range of nodeIds covered by its leaf set. If so, the message is forwarded directly to the destination node, namely the node in the leaf set whose nodeId is closest to the key (possibly the present node).
+
+If the key is not covered by the leaf set, then the routing table is used and the message is forwarded to a node that shares a common prefix with the key by at least
+one more digit. In certain cases, it is possible that the appropriate entry in the routing table is empty or the associated node is not reachable, in which case the message is forwarded to a node that shares a prefix with the key at least as long as the local node, and is numerically closer to the key than the present node’s id. Such a node must be in the leaf set unless the message has already arrived at the node with numerically closest nodeId. And, unless bjLj=2c adjacent nodes in the leaf set have
+failed simultaneously, at least one of those nodes must be live.
+
+This simple routing procedure always converges, because each step takes the message to a node that either (1) shares a longer prefix with the key than the local node, or
+(2) shares as long a prefix with, but is numerically closer to the key than the local node. It can be shown that the expected number of routing steps is log2^b N steps.
+
+
+
+
+
 
 
