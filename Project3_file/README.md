@@ -29,6 +29,8 @@ close to the present node, according to the proximity metric. If no node is know
 The neighborhood set M contains the nodeIds and IP addresses of the |M| nodes that are closest (according the proximity metric) to the local node. The neighborhood set
 is not normally used in routing messages; it is useful in maintaining locality properties. The leaf set L is the set of nodes with the |L|/2 numerically closest larger nodeIds, and the |L|/2 nodes with numerically closest smaller nodeIds, relative to the present node’s nodeId. The leaf set is used during the message routing, as described below. Typical values for |L| and |M| are 2^b or 2*2^b.
 
+![](https://github.com/zdong1995/DOSP5615/blob/master/Project_file/img/RoutingTable.png)
+
 ### 3.2 Routing
 Given a message, the node first checks to see if the key falls within the range of nodeIds covered by its leaf set. If so, the message is forwarded directly to the destination node, namely the node in the leaf set whose nodeId is closest to the key (possibly the present node).
 
