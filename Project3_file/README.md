@@ -47,9 +47,9 @@ This simple routing procedure always converges, because each step takes the mess
 We have roughly test several input for the simulation and make plots as following:
 
 #### Test Environment
-- OS: Windows 10 Education, Version 2004
-- Processor: AMD Ryzen Threadripper 2920X 12-Core 3.50 GHz
-- RAM: 32.0 GB
+- OS: Windows 10, Version Professional
+- Processor: Intel(R) Core(TM) i5-4210U CPU @ 1.70GHz 2.39GHz
+- RAM: 8.0 GB
 - System Type: 64-bit Operating System, x64-based processor
 
 ### 4.1 Performance
