@@ -43,6 +43,16 @@ This simple routing procedure always converges, because each step takes the mess
 
 ![](https://github.com/zdong1995/DOSP5615/blob/master/Project3_file/img/PseudoCode.png)
 
+## 4. Result
+We have roughly test several input for the simulation and make plots as following:
+
+#### Test Environment
+- OS: Windows 10 Education, Version 2004
+- Processor: AMD Ryzen Threadripper 2920X 12-Core 3.50 GHz
+- RAM: 32.0 GB
+- System Type: 64-bit Operating System, x64-based processor
+
+### 4.1 Performance
 
 
 
