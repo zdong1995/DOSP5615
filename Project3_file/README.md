@@ -41,7 +41,7 @@ failed simultaneously, at least one of those nodes must be live.
 This simple routing procedure always converges, because each step takes the message to a node that either (1) shares a longer prefix with the key than the local node, or
 (2) shares as long a prefix with, but is numerically closer to the key than the local node. It can be shown that the expected number of routing steps is log2^b N steps.
 
-
+![](https://github.com/zdong1995/DOSP5615/blob/master/Project3_file/img/PseudoCode.png)
 
 
 
