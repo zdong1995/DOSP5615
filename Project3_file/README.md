@@ -21,5 +21,13 @@ the ave of this algo is 1.000000
 For the Pastry simulation, Each node in the Pastry peer-to-peer overlay network is assigned a 128-bit node identifier (nodeId). The nodeId is used to indicate a node’s position in a circular nodeId space, which ranges from 0 to 2^128 - 1. The nodeId is assigned randomly when a node joins the system. It is assumed that nodeIds are generated such that the resulting set of nodeIds is uniformly distributed in the 128-bit nodeId space.
 
 ### 3.1 Node State
-Each Pastry node maintains a routing table, a neighborhood set and a leaf set.We begin with a description of the routing table. A node’s routing table, R, is organized into dlog2bNe rows with 2^b - 1 entries each. The 2^b - 1 entries at row n of the routing table each refer to a node whose nodeId shares the present node’s nodeId in the first n digits, but whose (n + 1)th digit has one of the 2^b - 1 possible values other than the (n + 1)th digit in the present node’s id.
+Each Pastry node maintains a routing table, a neighborhood set and a leaf set.We begin with a description of the routing table. A node’s routing table, R, is organized into log2^b N rows with 2^b - 1 entries each. The 2^b - 1 entries at row n of the routing table each refer to a node whose nodeId shares the present node’s nodeId in the first n digits, but whose (n + 1)th digit has one of the 2^b - 1 possible values other than the (n + 1)th digit in the present node’s id.
+
+Each entry in the routing table contains the IP address of one of potentially many nodes whose nodeId have the appropriate prefix; in practice, a node is chosen that is
+close to the present node, according to the proximity metric. If no node is known with a suitable nodeId, then the routing table entry is left empty. The uniform distribution of nodeIds ensures an even population of the nodeId space; thus, on average, only log2^b N rows are populated in the routing table.
+
+The neighborhood set M contains the nodeIds and IP addresses of the |M| nodes that are closest (according the proximity metric) to the local node. The neighborhood set
+is not normally used in routing messages; it is useful in maintaining locality properties. The leaf set L is the set of nodes with the |L|/2 numerically closest larger nodeIds, and the |L|/2 nodes with numerically closest smaller nodeIds, relative to the present node’s nodeId. The leaf set is used during the message routing, as described below. Typical values for |L| and |M| are 2^b or 2*2^b.
+
+
 
