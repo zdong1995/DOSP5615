@@ -53,7 +53,9 @@ We have roughly test several input for the simulation and make plots as followin
 - System Type: 64-bit Operating System, x64-based processor
 
 ### 4.1 Performance
+![](https://github.com/zdong1995/DOSP5615/blob/master/Project3_file/img/Result.png)
 
+The experiment result is similiar to our theory analyzise. The average number of hops for delivering one message is linear with the log(N), where N is the number of nodes in network. It proves that the expected number of routing steps is log2^b N steps.
 
 
 
