@@ -1,0 +1,83 @@
+{
+  "format": 1,
+  "restore": {
+    "/Users/zdong1995/Desktop/DOSP5615/Project4.1/Project4.1.fsproj": {}
+  },
+  "projects": {
+    "/Users/zdong1995/Desktop/DOSP5615/Project4.1/Project4.1.fsproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/Users/zdong1995/Desktop/DOSP5615/Project4.1/Project4.1.fsproj",
+        "projectName": "Project4.1",
+        "projectPath": "/Users/zdong1995/Desktop/DOSP5615/Project4.1/Project4.1.fsproj",
+        "packagesPath": "/Users/zdong1995/.nuget/packages/",
+        "outputPath": "/Users/zdong1995/Desktop/DOSP5615/Project4.1/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/Users/zdong1995/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net5.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {},
+          "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-tools/nuget/v3/index.json": {}
+        },
+        "frameworks": {
+          "net5.0": {
+            "targetAlias": "net5.0",
+            "projectReferences": {}
+          }
+        }
+      },
+      "frameworks": {
+        "net5.0": {
+          "targetAlias": "net5.0",
+          "dependencies": {
+            "Akka": {
+              "target": "Package",
+              "version": "[1.4.12, )",
+              "generatePathProperty": true
+            },
+            "Akka.FSharp": {
+              "target": "Package",
+              "version": "[1.4.12, )",
+              "generatePathProperty": true
+            },
+            "Akka.Remote": {
+              "target": "Package",
+              "version": "[1.4.12, )",
+              "generatePathProperty": true
+            },
+            "Akka.TestKit": {
+              "target": "Package",
+              "version": "[1.4.12, )",
+              "generatePathProperty": true
+            },
+            "FSharp.Core": {
+              "target": "Package",
+              "version": "[5.0.0-beta.*, )",
+              "generatePathProperty": true
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/5.0.100-preview.8.20417.9/RuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}
