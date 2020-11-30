@@ -5,8 +5,9 @@
     <TargetFramework>net5.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Program.fs" />
-    <Compile Include="testClient.fs" />
+    <Compile Include="Server.fsx" />
+    <Compile Include="Client.fsx" />
+    <Compile Include="Data.fsx" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Akka" Version="1.4.12" />
