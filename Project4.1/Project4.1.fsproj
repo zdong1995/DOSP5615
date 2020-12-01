@@ -8,6 +8,7 @@
     <Compile Include="Server.fsx" />
     <Compile Include="Client.fsx" />
     <Compile Include="Data.fsx" />
+    <Compile Include="Message.fsx" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Akka" Version="1.4.12" />
