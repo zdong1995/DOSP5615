@@ -14,6 +14,7 @@ open Akka.FSharp
 let mutable tweetTable = new Map<string, Tweet>([])
 let mutable userTable = new Map<string, User>([])
 let mutable tagTable = new Map<string, Tweet list>([])
+let mutable mentionTable = new Map<string, Tweet list>([])
 
 type Simulator() =
     // methods to create new user
@@ -57,11 +58,11 @@ type Simulator() =
         tagTable <- tagTable.Add(hashTag, List.append tagTable.[hashTag] [ tweet ])
 
     // extract all hashtags in the tweet content to return tags list
-    member this.ExtractTag(word: string) =
+    member this.ExtractTag(word: string, tag: char) =
         let mutable tags = List.empty
         let mutable index = 0
         while index < word.Length do
-            if word.[index] = '#' then
+            if word.[index] = tag then
                 // find end space of current tag
                 let mutable endIdx = index
                 while endIdx < word.Length && word.[endIdx] <> ' ' do
@@ -86,13 +87,33 @@ type Simulator() =
             this.NewTweet(tweet)
             userTable.[username].SendTweet(tweet)
             // update TagTable
-            let tags = this.ExtractTag(content)
-            for tag in tags do
-                this.AddToTagTable(tag, tweet)
+            let hashTags = this.ExtractTag(content, '#')
+            for hashTag in hashTags do
+                this.AddToTagTable(hashTag, tweet)
+            // update MentionTable
+            let mentions = this.ExtractTag(content, '@')
+            for mention in mentions do
+                this.AddToTagTable(mention, tweet)
+
             response <- "Success "
 
         response
+    
+    member this.ReTweet(username: string, password: string, content: string) =
+        this.SendTweet(username, password, content)
 
+    member this.QueryTweetsOfSubscribes(username: string, password: string) =
+        let mutable response = ""
+        if not (this.Login(username, password)) then
+            response <- "Error! Please check your login information!"
+        else
+            let user = this.GetUser(username)
+            let followingList = user.GetSubsribingList()
+            let mutable res = List.empty : Tweet list
+
+            for x in followingList do
+                res <- x.GetTweetList()
+                // "Query, username, password" 500 ms/次
     // retweet
     // member this.ReTweet(username: string, password: string, content: string) =
 
@@ -125,7 +146,7 @@ type Simulator() =
 let Simulator = Simulator()
 Simulator.Register("user1", "pw1")
 Simulator.Register("user2", "pw2")
-Simulator.Register("user2", "pw2")
+Simulator.Register("user3", "pw3")
 Simulator.SendTweet("user1", "pw1", "#test This the first tweet")
 Simulator.SendTweet("user2", "pw2", "#test This the second tweet")
 Simulator.SendTweet("user3", "pw3", "#omg #wtf I created another tag")
@@ -152,7 +173,7 @@ let RegisterHandler (name: string) =
             }
         loop ()
 
-let FollowHandler (name: string)=
+let FollowHandler (name: string) =
     spawn system name
     <| fun mailbox ->
         let rec loop () =
@@ -179,11 +200,13 @@ let APIsHandler (name: string) =
 
                 match box message with
                 | :? string as request ->
+                // Register, username, password, content/toFollow
                     let commands = request.Split(',')
                     let operation = commands.[0]
                     let username = commands.[1]
                     let password = commands.[2]
                     let arg1 = commands.[3]
+                    let mutable res = ""
                     match operation with
                     | "Register" ->
                         let handler = system.ActorSelection("RegisterHandler")
@@ -192,6 +215,8 @@ let APIsHandler (name: string) =
                         let handler = system.ActorSelection("FollowHandler")
                         handler <? MsgFollow(username, password, arg1) |> ignore
                     | _ -> return! loop()
+
+                    sender <? res |> ignore
                 | _ -> return! loop()
                 return! loop ()
             }
