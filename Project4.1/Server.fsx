@@ -5,6 +5,7 @@
 
 open Data
 open System
+open System.Collections.Generic
 open Akka.Actor
 open Akka.Configuration
 open Akka.FSharp
@@ -14,17 +15,33 @@ let mutable tweetTable = new Map<string, Tweet>([])
 let mutable userTable = new Map<string, User>([])
 let mutable tagTable = new Map<string, Tweet list>([])
 
-type Server() =
+type Simulator() =
     // methods to create new user
     member this.NewUser(user: User) =
         userTable <- userTable.Add(user.UserName, user)
+    
+    // getter of user
+    member this.GetUser(username: string) =
+        try
+            userTable.[username]
+        with
+            | :? KeyNotFoundException -> User("","") // not exist
+
+    // register user
+    member this.Register(username: string, password: string) =
+        let mutable response = "Username has already been used. Please choose a new one."
+        if not (userTable.ContainsKey(username)) then
+            this.NewUser(User(username, password))
+            response <- "Registered successfully"
+            
+        response
 
     // authentication to return whether login success or fails (bool)
-    member this.Auth(username: string, password: string) =
-        let mutable response = false
-        if (userTable.ContainsKey(username)) && (userTable.[username].Password = password) then
-            response <- true
-        response
+    member this.Login(username: string, password: string) =
+        try
+            userTable.ContainsKey(username) && (userTable.[username].Password = password)
+        with
+            | :? KeyNotFoundException -> false
     
     // add new tweet to tweetTable
     member this.NewTweet(tweet: Tweet) =
@@ -41,19 +58,24 @@ type Server() =
     // extract all hashtags in the tweet content to return tags list
     member this.ExtractTag(word: string) =
         let mutable tags = List.empty
-        if (word.Contains("#")) then
-            let mutable index = 0
-            if index < word.Length then
-                let startIdx = word.IndexOf("#", index)
-                let endIdx = word.IndexOf(" ", startIdx)
-                tags <- List.append tags [word.[startIdx..endIdx]]
+        let mutable index = 0
+        while index < word.Length do
+            if word.[index] = '#' then
+                // find end space of current tag
+                let mutable endIdx = index
+                while endIdx < word.Length && word.[endIdx] <> ' ' do
+                    endIdx <- endIdx + 1
+                if endIdx <> word.Length then
+                    tags <- List.append tags [word.[index..endIdx - 1]]
                 index <- endIdx + 1 // update index to search right
+            else
+                index <- index + 1
         tags
 
     // sent tweet after authentication, auto parse hashtag to update table
     member this.SendTweet(username: string, password: string, content: string) =
         let mutable response = ""
-        if not (this.Auth(username, password)) then
+        if not (this.Login(username, password)) then
             response <-  "Error! Please check your login information!"
         else
             // use data time as unique key for tweetId
@@ -65,23 +87,46 @@ type Server() =
             let tags = this.ExtractTag(content)
             for tag in tags do
                 this.AddToTagTable(tag, tweet)
-            
+            response <- "Success "
+
+        response
     
+    // retweet
+    // member this.ReTweet(username: string, password: string, content: string) =
+
+    // subscribe to another user
+    member this.Follow(username: string, password: string, toFollow: string) =
+        let mutable response = ""
+        if not (this.Login(username, password)) then
+            response <-  "Error! Please check your login information!"
+        else
+            let user = this.GetUser(username)
+            let userToFollow = this.GetUser(toFollow)
+            if user.UserName <> "" && userToFollow.UserName <> "" then // null check
+                user.SubsribeTo(userToFollow)
+                response <- username + " successfully followed " + toFollow
+            else
+                response <- "User not existed. Please check the user information"
+        response
+            
 
 // simple test
-let user1 = User("user1", "pw1")
-let user2 = User("user2", "pw2")
-let user3 = User("user3", "pw3")
-user1.SubsribeTo(user2)
-user1.SubsribeTo(user3)
+// let user1 = User("user1", "pw1")
+// let user2 = User("user2", "pw2")
+// let user3 = User("user3", "pw3")
+// user1.SubsribeTo(user2)
+// user1.SubsribeTo(user3)
 // printf "%A" [user1.GetSubsribingList()]
 // printf "%A" [user1.GetTweetList()]
 
 // server test
-let Twitter = Server()
-Twitter.NewUser(user1)
-Twitter.NewUser(user2)
-Twitter.NewUser(user3)
-Twitter.SendTweet("user1", "pw1", "#test This the first tweet")
-Twitter.SendTweet("user2", "pw2", "#test This the second tweet")
-Twitter.SendTweet("user3", "pw3", "#omg I created another tag")
+let Simulator = Simulator()
+Simulator.Register("user1", "pw1")
+Simulator.Register("user2", "pw2")
+Simulator.Register("user2", "pw2")
+Simulator.SendTweet("user1", "pw1", "#test This the first tweet")
+Simulator.SendTweet("user2", "pw2", "#test This the second tweet")
+Simulator.SendTweet("user3", "pw3", "#omg #wtf I created another tag")
+Simulator.Follow("user1", "pw1", "user2")
+Simulator.Follow("user1", "pw1", "user3")
+Simulator.Follow("user2", "pw2", "user4")
