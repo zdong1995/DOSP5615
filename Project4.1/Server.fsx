@@ -1,15 +1,11 @@
+module Server
+
 #load "./Data.fsx"
-#load "./Message.fsx"
-#r "nuget: Akka.FSharp"
-#r "nuget: Akka.TestKit"
-#r "nuget: Akka.Remote"
 
 open Data
-open Message
 
 open System
 open System.Collections.Generic
-open Akka.FSharp
 
 let mutable tweetTable = new Map<string, Tweet>([])
 let mutable userTable = new Map<string, User>([])
@@ -140,127 +136,3 @@ type Simulator() =
             else
                 response <- "User not existed. Please check the user information"
         response
-
-let Simulator = Simulator()
-
-let RegisterHandler =
-    spawn system "RegisterHandler"
-    <| fun mailbox ->
-        let rec loop () =
-            actor {
-                let! message = mailbox.Receive()
-                let sender = mailbox.Sender()
-
-                match box message :?> Message with
-                | MsgRegister(username, password) ->
-                    let response = Simulator.Register(username, password)
-                    printfn "Register response for %A: %A " username response
-                    sender <? response |> ignore
-                | _ -> failwith "Exception"
-                return! loop ()
-            }
-        loop ()
-
-let FollowHandler =
-    spawn system "FollowHandler"
-    <| fun mailbox ->
-        let rec loop () =
-            actor {
-                let! message = mailbox.Receive()
-                let sender = mailbox.Sender()
-
-                match box message :?> Message with
-                | MsgFollow(username, password, toFollow) ->
-                    let response = Simulator.Follow(username, password, toFollow)
-                    printfn "Follow response for %A: %A " username response
-                    sender <? response |> ignore
-                | _ -> failwith "Exception"
-                return! loop ()
-            }
-        loop ()
-
-let TweetHandler =
-    spawn system "TweetHandler"
-    <| fun mailbox ->
-        let rec loop () =
-            actor {
-                let! message = mailbox.Receive()
-                let sender = mailbox.Sender()
-
-                match box message :?> Message with
-                | MsgTweet(username, password, content) ->
-                    let response = Simulator.SendTweet(username, password, content)
-                    printfn "Tweet response for %A: %A " username response
-                    sender <? response |> ignore
-                | _ -> failwith "Exception"
-                return! loop ()
-            }
-        loop ()
-
-let ReTweetHandler =
-    spawn system "ReTweetHandler"
-    <| fun mailbox ->
-        let rec loop () =
-            actor {
-                let! message = mailbox.Receive()
-                let sender = mailbox.Sender()
-
-                match box message :?> Message with
-                | MsgReTweet(username, password, content, reTweetFrom) ->
-                    let response = Simulator.ReTweet(username, password, content, reTweetFrom)
-                    printfn "ReTweet response for %A: %A " username response
-                    sender <? response |> ignore
-                | _ -> failwith "Exception"
-                return! loop ()
-            }
-        loop ()
-
-let APIsHandler =
-    spawn system "APIsHandler"
-    <| fun mailbox ->
-        let rec loop () =
-            actor {
-                let! message = mailbox.Receive()
-                // printf "%A" message
-                let sender = mailbox.Sender()
-
-                match box message with
-                | :? string ->
-                    if message = "" then
-                        return! loop()
-                    
-                    let mutable handler = system.ActorSelection(url + "")
-                    let mutable msg = MsgEmpty("")
-                    // Register, username, password, content/toFollow
-                    let commands = message.Split('|')
-                    let operation = commands.[0]
-                    let username = commands.[1]
-                    let password = commands.[2]
-                    let arg1 = commands.[3]
-                    let arg2 = commands.[4]
-                    // printfn "%A" commands
-
-                    match operation with
-                    | "Register" ->
-                        handler <- system.ActorSelection(url + "RegisterHandler")
-                        msg <- MsgRegister(username, password)
-                    | "Follow" ->
-                        handler <- system.ActorSelection(url + "FollowHandler")
-                        msg <- MsgFollow(username, password, arg1)
-                    | "Tweet" ->
-                        handler <- system.ActorSelection(url + "TweetHandler")
-                        msg <- MsgTweet(username, password, arg1)
-                    | "ReTweet" ->
-                        handler <- system.ActorSelection(url + "ReTweetHandler")
-                        msg <- MsgReTweet(username, password, arg1, arg2)
-
-                    let res = Async.RunSynchronously(handler <? msg, 1000)
-                    sender <? res |> ignore
-                return! loop ()
-            }
-        loop ()
-
-// let initialize() =
-    //APIsHandler |> ignore
-    //RegisterHandler |> ignore
-    //FollowHandler |> ignore

@@ -40,3 +40,13 @@ type User(username: string, password: string) =
     // add one tweet to current user's tweets list
     member this.AddTweet (tweet: Tweet) =
         tweets <- List.append tweets [tweet]
+
+type Message =
+    | MsgRegister of string * string // ("username", "password")
+    | MsgTweet of string * string * string // ("username", "password", "content")
+    | MsgFollow of string * string * string // ("username", "password", "toFollow")
+    | MsgReTweet of string * string * string * string // ("username", "password", "content", "reTweetFrom")
+    | MsgQuery of int * string [] // (Query type * [hasTag, mentionedId, curUserId]
+    | MsgEmpty of string
+    // TODO
+    // Query type : 0. only hashTag 1. only mentioned 2. hashTag and mentioned

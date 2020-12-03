@@ -1,12 +1,12 @@
 #load "./Data.fsx"
-#load "./Message.fsx"
+#load "./Handler.fsx"
 #load "./Server.fsx"
 #r "nuget: Akka.FSharp" 
 #r "nuget: Akka.TestKit"
 #r "nuget: Akka.Remote" 
 
 open Data
-open Message
+open Handler
 open Server
 
 open System
@@ -15,7 +15,7 @@ open Akka.Configuration
 open Akka.FSharp
 open Akka.TestKit
 open System.Threading
-open System.Collections.Generic;
+open System.Collections.Generic
 
 type ClientMsg =
     |Register of String * String // (userId * passWord)   

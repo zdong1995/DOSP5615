@@ -1,13 +1,8 @@
-#load "./Data.fsx"
-#load "./Message.fsx"
-#load "./Server.fsx"
-#r "nuget: Akka.FSharp"
-#r "nuget: Akka.TestKit"
-#r "nuget: Akka.Remote"
+#load "./Handler.fsx"
 
-open Data
-open Message
-open Server
+#r "nuget: Akka.FSharp"
+
+open Handler
 
 open Akka.FSharp
 
