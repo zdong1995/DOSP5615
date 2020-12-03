@@ -16,6 +16,23 @@ let mutable userTable = new Map<string, User>([])
 let mutable tagTable = new Map<string, Tweet list>([])
 let mutable mentionTable = new Map<string, Tweet list>([])
 
+// extract all hashtags in the tweet content to return tags list
+let ExtractTag(word: string, tag: char) =
+    let mutable tags = List.empty
+    let mutable index = 0
+    while index < word.Length do
+        if word.[index] = tag then
+            // find end space of current tag
+            let mutable endIdx = index
+            while endIdx < word.Length && word.[endIdx] <> ' ' do
+                endIdx <- endIdx + 1
+            if endIdx <> word.Length
+            then tags <- List.append tags [ word.[index..endIdx - 1] ]
+            index <- endIdx + 1 // update index to search right
+        else
+            index <- index + 1
+    tags
+
 type Simulator() =
     // methods to create new user
     member this.NewUser(user: User) =
@@ -45,10 +62,6 @@ type Simulator() =
             && (userTable.[username].Password = password)
         with :? KeyNotFoundException -> false
 
-    // add new tweet to tweetTable
-    member this.NewTweet(tweet: Tweet) =
-        tweetTable <- tweetTable.Add(tweet.TweetId, tweet)
-
     // add one tweet to tagTable, if tag not exist, create one new record and add the tweet
     member this.AddToTagTable(hashTag: string, tweet: Tweet) =
         // initialize <key, value> pair with empty list
@@ -57,50 +70,47 @@ type Simulator() =
         // add tweet to existed hashtag list in the map
         tagTable <- tagTable.Add(hashTag, List.append tagTable.[hashTag] [ tweet ])
 
-    // extract all hashtags in the tweet content to return tags list
-    member this.ExtractTag(word: string, tag: char) =
-        let mutable tags = List.empty
-        let mutable index = 0
-        while index < word.Length do
-            if word.[index] = tag then
-                // find end space of current tag
-                let mutable endIdx = index
-                while endIdx < word.Length && word.[endIdx] <> ' ' do
-                    endIdx <- endIdx + 1
-                if endIdx <> word.Length
-                then tags <- List.append tags [ word.[index..endIdx - 1] ]
-                index <- endIdx + 1 // update index to search right
-            else
-                index <- index + 1
-        tags
+    
+    // wrapper of create new tweet for future re-use
+    // auto parse hashtag to update table and mention table
+    member this.NewTweet(username: string, password: string, content: string) =
+        // use data time as unique key for tweetId
+        let tweet =
+            Tweet(content, DateTime.Now.ToFileTime().ToString(), username)
+        // create tweet in TweetTable and User's TweetList
+        tweetTable <- tweetTable.Add(tweet.TweetId, tweet)
+        userTable.[username].AddTweet(tweet)
+        // update TagTable
+        let hashTags = ExtractTag(content, '#')
+        for hashTag in hashTags do
+            this.AddToTagTable(hashTag, tweet)
+        // update MentionTable
+        let mentions = ExtractTag(content, '@')
+        for mention in mentions do
+            this.AddToTagTable(mention, tweet)
+        
+        tweet
 
-    // sent tweet after authentication, auto parse hashtag to update table
+    // sent tweet after authentication
     member this.SendTweet(username: string, password: string, content: string) =
         let mutable response = ""
         if not (this.Login(username, password)) then
             response <- "Error! Please check your login information!"
         else
-            // use data time as unique key for tweetId
-            let tweet =
-                Tweet(content, DateTime.Now.ToFileTime().ToString(), username)
-            // create tweet in TweetTable and User's TweetList
-            this.NewTweet(tweet)
-            userTable.[username].AddTweet(tweet)
-            // update TagTable
-            let hashTags = this.ExtractTag(content, '#')
-            for hashTag in hashTags do
-                this.AddToTagTable(hashTag, tweet)
-            // update MentionTable
-            let mentions = this.ExtractTag(content, '@')
-            for mention in mentions do
-                this.AddToTagTable(mention, tweet)
-
-            response <- "Success "
-
+            this.NewTweet(username, password, content) |> ignore
+            response <- "Success"
         response
     
-    member this.ReTweet(username: string, password: string, content: string) =
-        this.SendTweet(username, password, content)
+    // re-tweet after authentication, update reTweetFrom for retweets
+    member this.ReTweet(username: string, password: string, content: string, reTweetFrom: string) =
+        let mutable response = ""
+        if not (this.Login(username, password)) then
+            response <- "Error! Please check your login information!"
+        else
+            let curTweet = this.NewTweet(username, password, content)
+            curTweet.ReTweet <- reTweetFrom
+            response <- "Success"
+        response
 
     member this.QueryTweetsOfSubscribes(username: string, password: string) =
         let mutable response = ""
@@ -114,8 +124,6 @@ type Simulator() =
             for x in followingList do
                 res <- x.GetTweetList()
                 // "Query, username, password" 500 ms/次
-    // retweet
-    // member this.ReTweet(username: string, password: string, content: string) =
 
     // subscribe to another user
     member this.Follow(username: string, password: string, toFollow: string) =
@@ -189,6 +197,24 @@ let TweetHandler =
             }
         loop ()
 
+let ReTweetHandler =
+    spawn system "ReTweetHandler"
+    <| fun mailbox ->
+        let rec loop () =
+            actor {
+                let! message = mailbox.Receive()
+                let sender = mailbox.Sender()
+
+                match box message :?> Message with
+                | MsgReTweet(username, password, content, reTweetFrom) ->
+                    let response = Simulator.ReTweet(username, password, content, reTweetFrom)
+                    printfn "ReTweet response for %A: %A " username response
+                    sender <? response |> ignore
+                | _ -> failwith "Exception"
+                return! loop ()
+            }
+        loop ()
+
 let APIsHandler =
     spawn system "APIsHandler"
     <| fun mailbox ->
@@ -211,6 +237,7 @@ let APIsHandler =
                     let username = commands.[1]
                     let password = commands.[2]
                     let arg1 = commands.[3]
+                    let arg2 = commands.[4]
                     // printfn "%A" commands
 
                     match operation with
@@ -223,6 +250,9 @@ let APIsHandler =
                     | "Tweet" ->
                         handler <- system.ActorSelection(url + "TweetHandler")
                         msg <- MsgTweet(username, password, arg1)
+                    | "ReTweet" ->
+                        handler <- system.ActorSelection(url + "ReTweetHandler")
+                        msg <- MsgReTweet(username, password, arg1, arg2)
 
                     let res = Async.RunSynchronously(handler <? msg, 1000)
                     sender <? res |> ignore
@@ -230,7 +260,7 @@ let APIsHandler =
             }
         loop ()
 
-let initialize() =
-    APIsHandler |> ignore
-    RegisterHandler |> ignore
-    FollowHandler |> ignore
+// let initialize() =
+    //APIsHandler |> ignore
+    //RegisterHandler |> ignore
+    //FollowHandler |> ignore

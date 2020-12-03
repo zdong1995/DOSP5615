@@ -2,12 +2,13 @@ module Data
 
 // Tweet Class
 type Tweet(content: string, tweetId: string, author: string) =
+    // initialize as empty for orginal tweet
+    let mutable reTweetFrom = ""
+
     member this.Content = content
     member this.TweetId = tweetId
     member this.Author = author
-    // rewrite the to String method to help debug
-    override this.ToString() =
-        this.TweetId + " " + this.Content
+    member this.ReTweet with get() = reTweetFrom and set(fromUser : string) = reTweetFrom <- fromUser
 
 type User(username: string, password: string) = 
     // let binding must come before interface and member declariation

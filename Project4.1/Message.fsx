@@ -8,7 +8,7 @@ type Message =
     | MsgRegister of string * string // ("username", "password")
     | MsgTweet of string * string * string // ("username", "password", "content")
     | MsgFollow of string * string * string // ("username", "password", "toFollow")
-    | MsgReTweet of string * string * string // ("username", "password", "content")
+    | MsgReTweet of string * string * string * string // ("username", "password", "content", "reTweetFrom")
     | MsgQuery of int * string [] // (Query type * [hasTag, mentionedId, curUserId]
     | MsgEmpty of string
     // TODO

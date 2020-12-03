@@ -94,28 +94,34 @@ The `tweetTable` will be:
 
 ```F#
 > tweetTable;;
-
 val it : Map<string,Tweet> =
   map
-    [("132514969730804680",
-      132514969730804680 #uf Go Gators! {Author = "user1";
-                                         Content = "#uf Go Gators!";
-                                         TweetId = "132514969730804680";});
-     ("132514969730821810",
-      132514969730821810 #dosp Twitter Clone!
-        {Author = "user2";
-         Content = "#dosp Twitter Clone!";
-         TweetId = "132514969730821810";});
-     ("132514969730823820",
-      132514969730823820 #dosp #uf I think this is cool!
-        {Author = "user1";
-         Content = "#dosp #uf I think this is cool!";
-         TweetId = "132514969730823820";});
-     ("132514969730825860",
-      132514969730825860 #dosp #omg Have you guys completed the project?
+    [("132515008790235520",
+      FSI_0006.Data+Tweet {Author = "user1";
+                           Content = "#uf Go Gators!";
+                           ReTweet = "";
+                           TweetId = "132515008790235520";});
+     ("132515008790278040",
+      FSI_0006.Data+Tweet {Author = "user2";
+                           Content = "#dosp Twitter Clone!";
+                           ReTweet = "";
+                           TweetId = "132515008790278040";});
+     ("132515008790310310",
+      FSI_0006.Data+Tweet {Author = "user1";
+                           Content = "#dosp #uf I think this is cool!";
+                           ReTweet = "";
+                           TweetId = "132515008790310310";});
+     ("132515008790336620",
+      FSI_0006.Data+Tweet
         {Author = "user3";
          Content = "#dosp #omg Have you guys completed the project?";
-         TweetId = "132514969730825860";})]
+         ReTweet = "";
+         TweetId = "132515008790336620";});
+     ("132515008790357460",
+      FSI_0006.Data+Tweet {Author = "user2";
+                           Content = "#uf Go Gators!";
+                           ReTweet = "user1";
+                           TweetId = "132515008790357460";})]
 ```
 
 The `userTable` will be:

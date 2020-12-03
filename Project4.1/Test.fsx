@@ -13,23 +13,26 @@ open Akka.FSharp
 
 // Remote API handler Test
 let main() =
-    initialize()
+    //initialize()
     let service = system.ActorSelection(url + "APIsHandler")
+    // command should have length = 5
     // Register
-    service <? "Register|user1|pw1|" |> ignore
-    service <? "Register|user1|pw1|" |> ignore
-    service <? "Register|user2|pw2|" |> ignore
-    service <? "Register|user3|pw3|" |> ignore
+    service <? "Register|user1|pw1||" |> ignore
+    service <? "Register|user1|pw1||" |> ignore
+    service <? "Register|user2|pw2||" |> ignore
+    service <? "Register|user3|pw3||" |> ignore
     // Follow
-    service <? "Follow|user1|pw1|user0" |> ignore
-    service <? "Follow|user1|pw1|user2" |> ignore
-    service <? "Follow|user1|pw1|user3" |> ignore
-    service <? "Follow|user2|pw2|user3" |> Async.Ignore |> Async.RunSynchronously |> ignore
+    service <? "Follow|user1|pw1|user0|" |> ignore
+    service <? "Follow|user1|pw1|user2|" |> ignore
+    service <? "Follow|user1|pw1|user3|" |> ignore
+    service <? "Follow|user2|pw2|user3|" |> Async.Ignore |> Async.RunSynchronously |> ignore
     // Tweet
-    service <? "Tweet|user1|pw1|#uf Go Gators!" |> ignore
-    service <? "Tweet|user2|pw2|#dosp Twitter Clone!" |> ignore
-    service <? "Tweet|user1|pw1|#dosp #uf I think this is cool!" |> ignore
-    service <? "Tweet|user3|pw3|#dosp #omg Have you guys completed the project?" |> ignore
+    service <? "Tweet|user1|pw1|#uf Go Gators!|" |> ignore
+    service <? "Tweet|user2|pw2|#dosp Twitter Clone!|" |> ignore
+    service <? "Tweet|user1|pw1|#dosp #uf I think this is cool!|" |> ignore
+    service <? "Tweet|user3|pw3|#dosp #omg Have you guys completed the project?|" |> ignore
+    // ReTweet
+    service <? "ReTweet|user2|pw2|#uf Go Gators!|user1" |> ignore
 
 main()
 
