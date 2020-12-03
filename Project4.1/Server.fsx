@@ -34,7 +34,7 @@ type Simulator() =
 
         if not (userTable.ContainsKey(username)) then
             this.NewUser(User(username, password))
-            response <- "Registered successfully"
+            response <- username + "Registered successfully"
 
         response
 
@@ -126,34 +126,13 @@ type Simulator() =
             let user = this.GetUser(username)
             let userToFollow = this.GetUser(toFollow)
             if user.UserName <> "" && userToFollow.UserName <> "" then // null check
-                user.SubscribeTo(userToFollow)
+                // TODO
                 response <- username + " successfully followed " + toFollow
             else
                 response <- "User not existed. Please check the user information"
         response
 
-
-// simple test
-// let user1 = User("user1", "pw1")
-// let user2 = User("user2", "pw2")
-// let user3 = User("user3", "pw3")
-// user1.SubsribeTo(user2)
-// user1.SubsribeTo(user3)
-// printf "%A" [user1.GetSubsribingList()]
-// printf "%A" [user1.GetTweetList()]
-
-// server test
 let Simulator = Simulator()
-Simulator.Register("user1", "pw1")
-Simulator.Register("user2", "pw2")
-Simulator.Register("user3", "pw3")
-Simulator.SendTweet("user1", "pw1", "#test This the first tweet")
-Simulator.SendTweet("user2", "pw2", "#test This the second tweet")
-Simulator.SendTweet("user3", "pw3", "#omg #wtf I created another tag")
-Simulator.Follow("user1", "pw1", "user2")
-Simulator.Follow("user1", "pw1", "user3")
-Simulator.Follow("user2", "pw2", "user4")
-
 
 let RegisterHandler =
     spawn system "RegisterHandler"
@@ -191,6 +170,24 @@ let FollowHandler =
             }
         loop ()
 
+let TweetHandler =
+    spawn system "TweetHandler"
+    <| fun mailbox ->
+        let rec loop () =
+            actor {
+                let! message = mailbox.Receive()
+                let sender = mailbox.Sender()
+
+                match box message :?> Message with
+                | MsgTweet(username, password, content) ->
+                    let response = Simulator.SendTweet(username, password, content)
+                    printfn "Tweet response for %A: %A " username response
+                    sender <? response |> ignore
+                | _ -> failwith "Exception"
+                return! loop ()
+            }
+        loop ()
+
 let APIsHandler =
     spawn system "APIsHandler"
     <| fun mailbox ->
@@ -204,11 +201,11 @@ let APIsHandler =
                 | :? string ->
                     if message = "" then
                         return! loop()
-                    // Register, username, password, content/toFollow
+                    
                     let mutable handler = system.ActorSelection(url + "")
                     let mutable msg = MsgEmpty("")
-
-                    let commands = message.Split(',')
+                    // Register, username, password, content/toFollow
+                    let commands = message.Split('|')
                     let operation = commands.[0]
                     let username = commands.[1]
                     let password = commands.[2]
@@ -222,6 +219,9 @@ let APIsHandler =
                     | "Follow" ->
                         handler <- system.ActorSelection(url + "FollowHandler")
                         msg <- MsgFollow(username, password, arg1)
+                    | "Tweet" ->
+                        handler <- system.ActorSelection(url + "TweetHandler")
+                        msg <- MsgTweet(username, password, arg1)
 
                     let res = Async.RunSynchronously(handler <? msg, 1000)
                     sender <? res |> ignore
@@ -230,14 +230,6 @@ let APIsHandler =
         loop ()
 
 let initialize() =
-    APIsHandler, RegisterHandler, FollowHandler |> ignore
-
-let main() =
-    initialize()
-    let service = system.ActorSelection(url + "APIsHandler")
-    service <? "Register,user1,pw1," |> ignore
-    service <? "Register,user5,pw5," |> ignore
-    service <? "Follow,user1,pw1,user0" |> ignore
-    service <? "Follow,user1,pw1,user5" |> ignore
-
-main()
+    APIsHandler |> ignore
+    RegisterHandler |> ignore
+    FollowHandler |> ignore
