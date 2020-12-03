@@ -39,6 +39,7 @@ Fields:
 - author: `string`
 
 ## Test
+Run `Test.fsx` file and you should receive the following expected result:
 
 ```shell
 Register response for "user1": "user1Registered successfully" 
@@ -55,71 +56,97 @@ Tweet response for "user1": "Success "
 Tweet response for "user3": "Success " 
 ```
 
-tagTable
+The `tagTable` will be:
 ```F#
-Map<string,Tweet list> =
+> tagTable;;
+
+val it : Map<string,Tweet list> =
   map
     [("#dosp",
-      [132514955636686980 #dosp Twitter Clone!
+      [132514969730821810 #dosp Twitter Clone!
          {Author = "user2";
           Content = "#dosp Twitter Clone!";
-          TweetId = "132514955636686980";};
-       132514955636690060 #dosp #uf I think this is cool!
+          TweetId = "132514969730821810";};
+       132514969730823820 #dosp #uf I think this is cool!
          {Author = "user1";
           Content = "#dosp #uf I think this is cool!";
-          TweetId = "132514955636690060";};
-       132514955636754520 #dosp #omg Have you guys completed the project?
+          TweetId = "132514969730823820";};
+       132514969730825860 #dosp #omg Have you guys completed the project?
          {Author = "user3";
           Content = "#dosp #omg Have you guys completed the project?";
-          TweetId = "132514955636754520";}]);
+          TweetId = "132514969730825860";}]);
      ("#omg",
-      [132514955636754520 #dosp #omg Have you guys completed the project?
+      [132514969730825860 #dosp #omg Have you guys completed the project?
          {Author = "user3";
           Content = "#dosp #omg Have you guys completed the project?";
-          TweetId = "132514955636754520";}]);
+          TweetId = "132514969730825860";}]);
      ("#uf",
-      [132514955636667090 #uf Go Gators! {Author = "user1";
+      [132514969730804680 #uf Go Gators! {Author = "user1";
                                           Content = "#uf Go Gators!";
-                                          TweetId = "132514955636667090";};
-       132514955636690060 #dosp #uf I think this is cool!
+                                          TweetId = "132514969730804680";};
+       132514969730823820 #dosp #uf I think this is cool!
          {Author = "user1";
           Content = "#dosp #uf I think this is cool!";
-          TweetId = "132514955636690060";}])]
+          TweetId = "132514969730823820";}])]
 ```
 
-tweetTable
+The `tweetTable` will be:
+
 ```F#
- Map<string,Tweet> = 
+> tweetTable;;
+
+val it : Map<string,Tweet> =
   map
-    [("132514955636667090",
-          132514955636667090 #uf Go Gators! {Author = "user1";
-                                            Content = "#uf Go Gators!";
-                                            TweetId = "132514955636667090";});
-        ("132514955636686980",
-          132514955636686980 #dosp Twitter Clone!
-            {Author = "user2";
-            Content = "#dosp Twitter Clone!";
-            TweetId = "132514955636686980";});
-        ("132514955636690060",
-          132514955636690060 #dosp #uf I think this is cool!
-            {Author = "user1";
-            Content = "#dosp #uf I think this is cool!";
-            TweetId = "132514955636690060";});
-        ("132514955636754520",
-          132514955636754520 #dosp #omg Have you guys completed the project?
-            {Author = "user3";
-            Content = "#dosp #omg Have you guys completed the project?";
-            TweetId = "132514955636754520";})]
+    [("132514969730804680",
+      132514969730804680 #uf Go Gators! {Author = "user1";
+                                         Content = "#uf Go Gators!";
+                                         TweetId = "132514969730804680";});
+     ("132514969730821810",
+      132514969730821810 #dosp Twitter Clone!
+        {Author = "user2";
+         Content = "#dosp Twitter Clone!";
+         TweetId = "132514969730821810";});
+     ("132514969730823820",
+      132514969730823820 #dosp #uf I think this is cool!
+        {Author = "user1";
+         Content = "#dosp #uf I think this is cool!";
+         TweetId = "132514969730823820";});
+     ("132514969730825860",
+      132514969730825860 #dosp #omg Have you guys completed the project?
+        {Author = "user3";
+         Content = "#dosp #omg Have you guys completed the project?";
+         TweetId = "132514969730825860";})]
 ```
 
-userTable
+The `userTable` will be:
 ```F#
-Map<string,User> =
+> userTable;;
+
+val it : Map<string,User> =
   map
-    [("user1", user1 {Password = "pw1";
-                      UserName = "user1";});
-     ("user2", user2 {Password = "pw2";
-                      UserName = "user2";});
-     ("user3", user3 {Password = "pw3";
-                      UserName = "user3";})]
+    [("user1", FSI_0006.Data+User {Password = "pw1";
+                                   UserName = "user1";});
+     ("user2", FSI_0006.Data+User {Password = "pw2";
+                                   UserName = "user2";});
+     ("user3", FSI_0006.Data+User {Password = "pw3";
+                                   UserName = "user3";})]
+```
+
+Users fields
+```F#
+> userTable.["user3"].GetFollowers();;
+
+val it : User list =
+  [FSI_0006.Data+User {Password = "pw1";
+                       UserName = "user1";};
+   FSI_0006.Data+User {Password = "pw2";
+                       UserName = "user2";}]
+
+> userTable.["user1"].GetSubscribingList();;
+
+val it : User list =
+  [FSI_0006.Data+User {Password = "pw2";
+                       UserName = "user2";};
+   FSI_0006.Data+User {Password = "pw3";
+                       UserName = "user3";}]
 ```

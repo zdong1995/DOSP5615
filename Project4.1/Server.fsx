@@ -85,7 +85,7 @@ type Simulator() =
                 Tweet(content, DateTime.Now.ToFileTime().ToString(), username)
             // create tweet in TweetTable and User's TweetList
             this.NewTweet(tweet)
-            userTable.[username].SendTweet(tweet)
+            userTable.[username].AddTweet(tweet)
             // update TagTable
             let hashTags = this.ExtractTag(content, '#')
             for hashTag in hashTags do
@@ -126,7 +126,8 @@ type Simulator() =
             let user = this.GetUser(username)
             let userToFollow = this.GetUser(toFollow)
             if user.UserName <> "" && userToFollow.UserName <> "" then // null check
-                // TODO
+                user.AddSubscribingList(userToFollow)
+                userToFollow.AddFollower(user)
                 response <- username + " successfully followed " + toFollow
             else
                 response <- "User not existed. Please check the user information"
