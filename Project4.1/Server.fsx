@@ -108,7 +108,7 @@ type Simulator() =
             response <- "Error! Please check your login information!"
         else
             let user = this.GetUser(username)
-            let followingList = user.GetSubsribingList()
+            let followingList = user.GetSubscribingList()
             let mutable res = List.empty : Tweet list
 
             for x in followingList do
@@ -126,7 +126,7 @@ type Simulator() =
             let user = this.GetUser(username)
             let userToFollow = this.GetUser(toFollow)
             if user.UserName <> "" && userToFollow.UserName <> "" then // null check
-                user.SubsribeTo(userToFollow)
+                user.SubscribeTo(userToFollow)
                 response <- username + " successfully followed " + toFollow
             else
                 response <- "User not existed. Please check the user information"
@@ -155,8 +155,8 @@ Simulator.Follow("user1", "pw1", "user3")
 Simulator.Follow("user2", "pw2", "user4")
 
 
-let RegisterHandler (name: string) =
-    spawn system name
+let RegisterHandler =
+    spawn system "RegisterHandler"
     <| fun mailbox ->
         let rec loop () =
             actor {
@@ -165,16 +165,16 @@ let RegisterHandler (name: string) =
 
                 match box message :?> Message with
                 | MsgRegister(username, password) ->
-                    printfn "Register successfully for %A" username
                     let response = Simulator.Register(username, password)
+                    printfn "Register response for %A: %A " username response
                     sender <? response |> ignore
                 | _ -> failwith "Exception"
                 return! loop ()
             }
         loop ()
 
-let FollowHandler (name: string) =
-    spawn system name
+let FollowHandler =
+    spawn system "FollowHandler"
     <| fun mailbox ->
         let rec loop () =
             actor {
@@ -184,50 +184,60 @@ let FollowHandler (name: string) =
                 match box message :?> Message with
                 | MsgFollow(username, password, toFollow) ->
                     let response = Simulator.Follow(username, password, toFollow)
+                    printfn "Follow response for %A: %A " username response
                     sender <? response |> ignore
                 | _ -> failwith "Exception"
                 return! loop ()
             }
         loop ()
 
-let APIsHandler (name: string) =
-    spawn system name
+let APIsHandler =
+    spawn system "APIsHandler"
     <| fun mailbox ->
         let rec loop () =
             actor {
                 let! message = mailbox.Receive()
+                // printf "%A" message
                 let sender = mailbox.Sender()
 
                 match box message with
-                | :? string as request ->
-                // Register, username, password, content/toFollow
-                    let commands = request.Split(',')
+                | :? string ->
+                    if message = "" then
+                        return! loop()
+                    // Register, username, password, content/toFollow
+                    let mutable handler = system.ActorSelection(url + "")
+                    let mutable msg = MsgEmpty("")
+
+                    let commands = message.Split(',')
                     let operation = commands.[0]
                     let username = commands.[1]
                     let password = commands.[2]
                     let arg1 = commands.[3]
-                    let mutable res = ""
+                    // printfn "%A" commands
+
                     match operation with
                     | "Register" ->
-                        let handler = system.ActorSelection("RegisterHandler")
-                        handler <? MsgRegister(username, password) |> ignore
+                        handler <- system.ActorSelection(url + "RegisterHandler")
+                        msg <- MsgRegister(username, password)
                     | "Follow" ->
-                        let handler = system.ActorSelection("FollowHandler")
-                        handler <? MsgFollow(username, password, arg1) |> ignore
-                    | _ -> return! loop()
+                        handler <- system.ActorSelection(url + "FollowHandler")
+                        msg <- MsgFollow(username, password, arg1)
 
+                    let res = Async.RunSynchronously(handler <? msg, 1000)
                     sender <? res |> ignore
-                | _ -> return! loop()
                 return! loop ()
             }
         loop ()
 
-let main() =
-    APIsHandler("APIsHandler") |> ignore
-    RegisterHandler("RegisterHandler") |> ignore
-    FollowHandler("FollowHandler") |> ignore
-    let service = system.ActorSelection("APIsHandler")
+let initialize() =
+    APIsHandler, RegisterHandler, FollowHandler |> ignore
 
-    service <? "Register, user1, pw1" |> ignore
+let main() =
+    initialize()
+    let service = system.ActorSelection(url + "APIsHandler")
+    service <? "Register,user1,pw1," |> ignore
+    service <? "Register,user5,pw5," |> ignore
+    service <? "Follow,user1,pw1,user0" |> ignore
+    service <? "Follow,user1,pw1,user5" |> ignore
 
 main()

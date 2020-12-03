@@ -21,12 +21,12 @@ type User(username: string, password: string) =
     // getters
     member this.GetFollowers() =
         followers
-    member this.GetSubsribingList() =
+    member this.GetSubscribingList() =
         following
     member this.GetTweetList() =
         tweets
     // method to subsribeTo another user
-    member this.SubsribeTo (user: User) =
+    member this.SubscribeTo (user: User) =
         following <- List.append following [user]
     // mehtod to send tweet
     member this.SendTweet (tweet: Tweet) =

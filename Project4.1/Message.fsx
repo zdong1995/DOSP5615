@@ -10,6 +10,7 @@ type Message =
     | MsgFollow of string * string * string // ("username", "password", "toFollow")
     | MsgReTweet of string * string * string // ("username", "password", "content")
     | MsgQuery of int * string [] // (Query type * [hasTag, mentionedId, curUserId]
+    | MsgEmpty of string
     // TODO
     // Query type : 0. only hashTag 1. only mentioned 2. hashTag and mentioned
 
