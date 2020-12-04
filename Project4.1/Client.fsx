@@ -41,13 +41,17 @@ let client (name : string) =
                     let! message = mailbox.Receive()
                     match box message :?> ClientMsg with
                     | Register(userId, password) ->
-                        let cmd = "Register|" + userId + "|" + password + "|" + "arg1" + "|"
+                        let cmd = "Register|" + userId + "|" + password + "||"
                         server <? cmd |> Async.RunSynchronously
                     
                     | LogIn(userId, password) ->
-                        logInStatus <- true
-                        let client = system.ActorSelection(url + userId)
-                        client <? AutoQuery(userId) 
+                        let cmd = "Login|" + userId + "|" + password + "||"
+                        let mutable auth = false
+                        auth <- Async.RunSynchronously(server <? cmd, 1000)
+                        if auth = true then
+                            logInStatus <- true
+                            let client = system.ActorSelection(url + userId)
+                            client <? AutoQuery(userId) 
 
                     | LogOut(userId) ->
                         logInStatus <- false
@@ -134,7 +138,7 @@ let test() =
             let x = j % modNum
             if x = 0 then 
                 let oldContent = "this is a retweet! "    // map.get the subscribers and then get the tweet list then extract the content.
-                client <? ReTweet(authorId, password, oldContent)
+                client <? ReTweet(authorId, password, oldContent) |> ignore
             else 
                 let content = "This is a tweet content from " + authorId + " and index is : " + "j"
                 client <? Tweet(content, authorId) |> ignore
