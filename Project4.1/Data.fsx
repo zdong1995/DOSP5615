@@ -9,6 +9,13 @@ type Tweet(content: string, tweetId: string, author: string) =
     member this.TweetId = tweetId
     member this.Author = author
     member this.ReTweet with get() = reTweetFrom and set(fromUser : string) = reTweetFrom <- fromUser
+    
+    member this.Serializer() =
+        let mutable res = sprintf "TweetID: %s\nContent: %s\n Author: %s\n" tweetId content author
+        if this.ReTweet <> "" then
+            res <- res + sprintf "Retweet from: %s\n" reTweetFrom
+        res
+
 
 type User(username: string, password: string) = 
     // let binding must come before interface and member declariation

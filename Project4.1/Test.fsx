@@ -1,10 +1,16 @@
-#load "./Handler.fsx"
-
+#load "./Data.fsx"
+#load "./Actor.fsx"
+#load "./Server.fsx"
 #r "nuget: Akka.FSharp"
+#r "nuget: Akka.TestKit"
+#r "nuget: Akka.Remote"
 
-open Handler
+open Data
+open Actor
+open Server
 
 open Akka.FSharp
+
 
 // Remote API handler Test
 let main() =
@@ -22,10 +28,10 @@ let main() =
     service <? "Follow|user1|pw1|user3|" |> ignore
     service <? "Follow|user2|pw2|user3|" |> Async.Ignore |> Async.RunSynchronously |> ignore
     // Tweet
-    service <? "Tweet|user1|pw1|#uf Go Gators!|" |> ignore
-    service <? "Tweet|user2|pw2|#dosp Twitter Clone!|" |> ignore
-    service <? "Tweet|user1|pw1|#dosp #uf I think this is cool!|" |> ignore
-    service <? "Tweet|user3|pw3|#dosp #omg Have you guys completed the project?|" |> ignore
+    service <? "Tweet|user1|pw1|#uf Go Gators! @user3 |" |> ignore
+    service <? "Tweet|user2|pw2|#dosp Twitter Clone! @user3 |" |> ignore
+    service <? "Tweet|user1|pw1|#dosp #uf I think this is cool! @user3 |" |> ignore
+    service <? "Tweet|user3|pw3|#dosp #omg Have you guys completed the project? @user1 |" |> ignore
     // ReTweet
     service <? "ReTweet|user2|pw2|#uf Go Gators!|user1" |> ignore
 

@@ -8,7 +8,7 @@
     <Compile Include="Server.fsx" />
     <Compile Include="Client.fsx" />
     <Compile Include="Data.fsx" />
-    <Compile Include="Handler.fsx" />
+    <Compile Include="Actor.fsx" />
     <Compile Include="Test.fsx" />
   </ItemGroup>
   <ItemGroup>

@@ -1,11 +1,22 @@
 module Server
 
 #load "./Data.fsx"
+#load "./Actor.fsx"
+#r "nuget: Akka.FSharp"
+#r "nuget: Akka.TestKit"
+#r "nuget: Akka.Remote"
 
 open Data
+open Actor
 
 open System
 open System.Collections.Generic
+open System
+open Akka.Actor
+open Akka.Configuration
+open Akka.FSharp
+open Akka.TestKit
+open Akka.Remote
 
 let mutable tweetTable = new Map<string, Tweet>([])
 let mutable userTable = new Map<string, User>([])
@@ -28,6 +39,13 @@ let ExtractTag(word: string, tag: char) =
         else
             index <- index + 1
     tags
+// serialize tweet list, return empty string if tweets list is empty
+let SerializeList(tweets: Tweet list) =
+    let mutable res = ""
+    if tweets.Length <> 0 then
+        for tweet in tweets do
+            res <- res + tweet.Serializer() + "\n"
+    res
 
 type Simulator() =
     // methods to create new user
@@ -64,28 +82,36 @@ type Simulator() =
         if not (tagTable.ContainsKey(hashTag))
         then tagTable <- tagTable.Add(hashTag, List.empty)
         // add tweet to existed hashtag list in the map
-        tagTable <- tagTable.Add(hashTag, List.append tagTable.[hashTag] [ tweet ])
+        tagTable <- tagTable.Add(hashTag, List.append tagTable.[hashTag] [tweet])
 
+    // add one tweet to mentionTable
+    member this.AddToMentionTable(username: string, tweet: Tweet) =
+        // initialize <key, value> pair with empty list
+        if not (mentionTable.ContainsKey(username))
+        then mentionTable <- mentionTable.Add(username, List.empty)
+        // add tweet to existed hashtag list in the map
+        mentionTable <- mentionTable.Add(username, List.append mentionTable.[username] [tweet])
     
     // wrapper of create new tweet for future re-use
     // auto parse hashtag to update table and mention table
     member this.NewTweet(username: string, password: string, content: string) =
         // use data time as unique key for tweetId
-        let tweet =
+        let newTweet =
             Tweet(content, DateTime.Now.ToFileTime().ToString(), username)
         // create tweet in TweetTable and User's TweetList
-        tweetTable <- tweetTable.Add(tweet.TweetId, tweet)
-        userTable.[username].AddTweet(tweet)
+        tweetTable <- tweetTable.Add(newTweet.TweetId, newTweet)
+        userTable.[username].AddTweet(newTweet)
         // update TagTable
         let hashTags = ExtractTag(content, '#')
         for hashTag in hashTags do
-            this.AddToTagTable(hashTag, tweet)
+            this.AddToTagTable(hashTag, newTweet)
         // update MentionTable
         let mentions = ExtractTag(content, '@')
         for mention in mentions do
-            this.AddToTagTable(mention, tweet)
-        
-        tweet
+            printf "%A" mention
+            this.AddToMentionTable(mention, newTweet)
+        // return the newly created tweet
+        newTweet
 
     // sent tweet after authentication
     member this.SendTweet(username: string, password: string, content: string) =
@@ -108,19 +134,6 @@ type Simulator() =
             response <- "Success"
         response
 
-    member this.QueryTweetsOfSubscribes(username: string, password: string) =
-        let mutable response = ""
-        if not (this.Login(username, password)) then
-            response <- "Error! Please check your login information!"
-        else
-            let user = this.GetUser(username)
-            let followingList = user.GetSubscribingList()
-            let mutable res = List.empty : Tweet list
-
-            for x in followingList do
-                res <- x.GetTweetList()
-                // "Query, username, password" 500 ms/次
-
     // subscribe to another user
     member this.Follow(username: string, password: string, toFollow: string) =
         let mutable response = ""
@@ -136,3 +149,150 @@ type Simulator() =
             else
                 response <- "User not existed. Please check the user information"
         response
+
+    // query of all tweets that user subscribed to, login needed
+    member this.QuerySubscribedTo(username: string, password: string) =
+        let mutable response = ""
+        if not (this.Login(username, password)) then
+            response <- "Error! Please check your login information!"
+        else
+            let user = this.GetUser(username)
+            let followingList = user.GetSubscribingList()
+
+            for i in followingList do
+                response <- response + SerializeList(i.GetTweetList())
+        response
+
+    // query of all tweets that user was mentioned, not need login
+    member this.QueryMentioned(username: string) =
+        let mutable response = "Error! The user does not exist. Please verify the username."
+        if mentionTable.ContainsKey("@" + username) then
+            response <- SerializeList(mentionTable.["@" + username])
+        response
+
+    // query of tweets of specifc hashtag, not need login
+    member this.QueryTag(hashtag: string) =
+        let mutable response = ""
+        if tagTable.ContainsKey(hashtag) then
+            response <- SerializeList(tagTable.[hashtag])
+        response
+
+
+let Simulator = Simulator()
+
+let RegisterHandler =
+    spawn system "RegisterHandler"
+    <| fun mailbox ->
+        let rec loop () =
+            actor {
+                let! message = mailbox.Receive()
+                let sender = mailbox.Sender()
+
+                match box message :?> Message with
+                | MsgRegister(username, password) ->
+                    let response = Simulator.Register(username, password)
+                    printfn "Register response for %A: %A " username response
+                    sender <? response |> ignore
+                | _ -> failwith "Exception"
+                return! loop ()
+            }
+        loop ()
+
+let FollowHandler =
+    spawn system "FollowHandler"
+    <| fun mailbox ->
+        let rec loop () =
+            actor {
+                let! message = mailbox.Receive()
+                let sender = mailbox.Sender()
+
+                match box message :?> Message with
+                | MsgFollow(username, password, toFollow) ->
+                    let response = Simulator.Follow(username, password, toFollow)
+                    printfn "Follow response for %A: %A " username response
+                    sender <? response |> ignore
+                | _ -> failwith "Exception"
+                return! loop ()
+            }
+        loop ()
+
+let TweetHandler =
+    spawn system "TweetHandler"
+    <| fun mailbox ->
+        let rec loop () =
+            actor {
+                let! message = mailbox.Receive()
+                let sender = mailbox.Sender()
+
+                match box message :?> Message with
+                | MsgTweet(username, password, content) ->
+                    let response = Simulator.SendTweet(username, password, content)
+                    printfn "Tweet response for %A: %A " username response
+                    sender <? response |> ignore
+                | _ -> failwith "Exception"
+                return! loop ()
+            }
+        loop ()
+
+let ReTweetHandler =
+    spawn system "ReTweetHandler"
+    <| fun mailbox ->
+        let rec loop () =
+            actor {
+                let! message = mailbox.Receive()
+                let sender = mailbox.Sender()
+
+                match box message :?> Message with
+                | MsgReTweet(username, password, content, reTweetFrom) ->
+                    let response = Simulator.ReTweet(username, password, content, reTweetFrom)
+                    printfn "ReTweet response for %A: %A " username response
+                    sender <? response |> ignore
+                | _ -> failwith "Exception"
+                return! loop ()
+            }
+        loop ()
+
+let APIsHandler =
+    spawn system "APIsHandler"
+    <| fun mailbox ->
+        let rec loop () =
+            actor {
+                let! message = mailbox.Receive()
+                // printf "%A" message
+                let sender = mailbox.Sender()
+
+                match box message with
+                | :? string ->
+                    if message = "" then
+                        return! loop()
+                    
+                    let mutable handler = system.ActorSelection(url + "")
+                    let mutable msg = MsgEmpty("")
+                    // Register, username, password, content/toFollow
+                    let commands = message.Split('|')
+                    let operation = commands.[0]
+                    let username = commands.[1]
+                    let password = commands.[2]
+                    let arg1 = commands.[3]
+                    let arg2 = commands.[4]
+                    // printfn "%A" commands
+
+                    match operation with
+                    | "Register" ->
+                        handler <- system.ActorSelection(url + "RegisterHandler")
+                        msg <- MsgRegister(username, password)
+                    | "Follow" ->
+                        handler <- system.ActorSelection(url + "FollowHandler")
+                        msg <- MsgFollow(username, password, arg1)
+                    | "Tweet" ->
+                        handler <- system.ActorSelection(url + "TweetHandler")
+                        msg <- MsgTweet(username, password, arg1)
+                    | "ReTweet" ->
+                        handler <- system.ActorSelection(url + "ReTweetHandler")
+                        msg <- MsgReTweet(username, password, arg1, arg2)
+
+                    let res = Async.RunSynchronously(handler <? msg, 1000)
+                    sender <? res |> ignore
+                return! loop ()
+            }
+        loop ()

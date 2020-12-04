@@ -1,21 +1,20 @@
 #load "./Data.fsx"
-#load "./Handler.fsx"
-#load "./Server.fsx"
-#r "nuget: Akka.FSharp" 
+#load "./Actor.fsx"
+#r "nuget: Akka.FSharp"
 #r "nuget: Akka.TestKit"
-#r "nuget: Akka.Remote" 
+#r "nuget: Akka.Remote"
 
 open Data
-open Handler
-open Server
+open Actor
 
 open System
+open System.Threading
+open System.Collections.Generic
 open Akka.Actor
 open Akka.Configuration
 open Akka.FSharp
 open Akka.TestKit
-open System.Threading
-open System.Collections.Generic
+open Akka.Remote
 
 type ClientMsg =
     |Register of String * String // (userId * passWord)   
