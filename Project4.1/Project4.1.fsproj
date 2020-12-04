@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Project4._1</RootNamespace>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net5.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Server.fsx" />
+    <Compile Include="Client.fsx" />
+    <Compile Include="Data.fsx" />
+    <Compile Include="Actor.fsx" />
+    <Compile Include="Test.fsx" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Akka" Version="1.4.12" />
+    <PackageReference Include="Akka.FSharp" Version="1.4.12" />
+    <PackageReference Include="Akka.Remote" Version="1.4.12" />
+    <PackageReference Include="Akka.TestKit" Version="1.4.12" />
+  </ItemGroup>
+</Project>
