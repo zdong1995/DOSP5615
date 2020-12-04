@@ -24,7 +24,7 @@ Also a tester/simulator to test the above was implemented with support to:
 
 The infrastructure of Twitter Enginee is as following:
 
-![](https://github.com/zdong1995/DOSP5615/blob/master/Project4.1/img/Infra.jpg)
+![](https://github.com/zdong1995/DOSP5615/blob/twitter/Project4.1/img/Infra.jpg)
 
 ### Database Management
 
