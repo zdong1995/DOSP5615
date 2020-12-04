@@ -64,10 +64,10 @@ service <? "ReTweet|user2|pw2|#uf Go Gators!|user1" |> ignore
 ### Service logic
 
 ```shell
-Register response for "user1": "user1Registered successfully" 
+Register response for "user1": "user1 Registered successfully" 
 Register response for "user1": "Username has already been used. Please choose a new one." 
-Register response for "user2": "user2Registered successfully" 
-Register response for "user3": "user3Registered successfully" 
+Register response for "user2": "user2 Registered successfully" 
+Register response for "user3": "user3 Registered successfully" 
 Follow response for "user1": "User not existed. Please check the user information" 
 Follow response for "user1": "user1 successfully followed user2" 
 Follow response for "user1": "user1 successfully followed user3" 
@@ -76,6 +76,81 @@ Tweet response for "user1": "Success"
 Tweet response for "user2": "Success" 
 Tweet response for "user1": "Success" 
 Tweet response for "user3": "Success" 
+ReTweet response for "user2": "Success" 
+ReTweet response for "user3": "Success" 
+```
+#### Query feature
+Query for hashtag:
+
+```
+Query hashtag response for "#dosp" : "TweetID: 132515239516962940
+Content: #dosp Twitter Clone! @user3 
+ Author: user2
+
+TweetID: 132515239516965180
+Content: #dosp #uf I think this is cool! @user3 
+ Author: user1
+
+TweetID: 132515239516967540
+Content: #dosp #omg Have you guys completed the project? @user1 
+ Author: user3
+
+"
+```
+
+Query for mentioned:
+
+```
+Query mentioned response for "user3" :
+
+"TweetID: 132515236333693580
+Content: #uf Go Gators! @user3 
+ Author: user1
+
+TweetID: 132515236333708940
+Content: #dosp Twitter Clone! @user3 
+ Author: user2
+
+TweetID: 132515236333710700
+Content: #dosp #uf I think this is cool! @user3 
+ Author: user1
+
+TweetID: 132515236333723940
+Content: #uf Go Gators! @user3 
+ Author: user2
+Retweet from: user1
+
+TweetID: 132515236333728120
+Content: #uf Go Gators! @user3 
+ Author: user3
+Retweet from: user1
+
+"
+```
+
+Query for subscribing list:
+```
+Query subscribing response for "user1" :
+
+"TweetID: 132515236333708940
+Content: #dosp Twitter Clone! @user3 
+ Author: user2
+
+TweetID: 132515236333723940
+Content: #uf Go Gators! @user3 
+ Author: user2
+Retweet from: user1
+
+TweetID: 132515236333712730
+Content: #dosp #omg Have you guys completed the project? @user1 
+ Author: user3
+
+TweetID: 132515236333728120
+Content: #uf Go Gators! @user3 
+ Author: user3
+Retweet from: user1
+
+"
 ```
 
 ### Data Consistency
@@ -101,33 +176,38 @@ The `tweetTable` will be:
 
 val it : Map<string,Tweet> =
   map
-    [("132515208335392600",
-      FSI_0021.Data+Tweet {Author = "user1";
+    [("132515239516943870",
+      FSI_0016.Data+Tweet {Author = "user1";
                            Content = "#uf Go Gators! @user3 ";
                            ReTweet = "";
-                           TweetId = "132515208335392600";});
-     ("132515208335414070",
-      FSI_0021.Data+Tweet {Author = "user2";
+                           TweetId = "132515239516943870";});
+     ("132515239516962940",
+      FSI_0016.Data+Tweet {Author = "user2";
                            Content = "#dosp Twitter Clone! @user3 ";
                            ReTweet = "";
-                           TweetId = "132515208335414070";});
-     ("132515208335416700",
-      FSI_0021.Data+Tweet
+                           TweetId = "132515239516962940";});
+     ("132515239516965180",
+      FSI_0016.Data+Tweet
         {Author = "user1";
          Content = "#dosp #uf I think this is cool! @user3 ";
          ReTweet = "";
-         TweetId = "132515208335416700";});
-     ("132515208335418770",
-      FSI_0021.Data+Tweet
+         TweetId = "132515239516965180";});
+     ("132515239516967540",
+      FSI_0016.Data+Tweet
         {Author = "user3";
          Content = "#dosp #omg Have you guys completed the project? @user1 ";
          ReTweet = "";
-         TweetId = "132515208335418770";});
-     ("132515208335430160",
-      FSI_0021.Data+Tweet {Author = "user2";
-                           Content = "#uf Go Gators!";
+         TweetId = "132515239516967540";});
+     ("132515239516982040",
+      FSI_0016.Data+Tweet {Author = "user2";
+                           Content = "#uf Go Gators! @user3 ";
                            ReTweet = "user1";
-                           TweetId = "132515208335430160";})]
+                           TweetId = "132515239516982040";});
+     ("132515239516988390",
+      FSI_0016.Data+Tweet {Author = "user3";
+                           Content = "#uf Go Gators! @user3 ";
+                           ReTweet = "user1";
+                           TweetId = "132515239516988390";})]
 ```
 
 The `tagTable` will be:
@@ -137,40 +217,44 @@ The `tagTable` will be:
 val it : Map<string,Tweet list> =
   map
     [("#dosp",
-      [FSI_0021.Data+Tweet {Author = "user2";
+      [FSI_0016.Data+Tweet {Author = "user2";
                             Content = "#dosp Twitter Clone! @user3 ";
                             ReTweet = "";
-                            TweetId = "132515208335414070";};
-       FSI_0021.Data+Tweet
+                            TweetId = "132515239516962940";};
+       FSI_0016.Data+Tweet
          {Author = "user1";
           Content = "#dosp #uf I think this is cool! @user3 ";
           ReTweet = "";
-          TweetId = "132515208335416700";};
-       FSI_0021.Data+Tweet
+          TweetId = "132515239516965180";};
+       FSI_0016.Data+Tweet
          {Author = "user3";
           Content = "#dosp #omg Have you guys completed the project? @user1 ";
           ReTweet = "";
-          TweetId = "132515208335418770";}]);
+          TweetId = "132515239516967540";}]);
      ("#omg",
-      [FSI_0021.Data+Tweet
+      [FSI_0016.Data+Tweet
          {Author = "user3";
           Content = "#dosp #omg Have you guys completed the project? @user1 ";
           ReTweet = "";
-          TweetId = "132515208335418770";}]);
+          TweetId = "132515239516967540";}]);
      ("#uf",
-      [FSI_0021.Data+Tweet {Author = "user1";
+      [FSI_0016.Data+Tweet {Author = "user1";
                             Content = "#uf Go Gators! @user3 ";
                             ReTweet = "";
-                            TweetId = "132515208335392600";};
-       FSI_0021.Data+Tweet
+                            TweetId = "132515239516943870";};
+       FSI_0016.Data+Tweet
          {Author = "user1";
           Content = "#dosp #uf I think this is cool! @user3 ";
           ReTweet = "";
-          TweetId = "132515208335416700";};
-       FSI_0021.Data+Tweet {Author = "user2";
-                            Content = "#uf Go Gators!";
+          TweetId = "132515239516965180";};
+       FSI_0016.Data+Tweet {Author = "user2";
+                            Content = "#uf Go Gators! @user3 ";
                             ReTweet = "user1";
-                            TweetId = "132515208335430160";}])]
+                            TweetId = "132515239516982040";};
+       FSI_0016.Data+Tweet {Author = "user3";
+                            Content = "#uf Go Gators! @user3 ";
+                            ReTweet = "user1";
+                            TweetId = "132515239516988390";}])]
 ```
 
 The `mentionTable` will be:
@@ -180,25 +264,33 @@ The `mentionTable` will be:
 val it : Map<string,Tweet list> =
   map
     [("@user1",
-      [FSI_0021.Data+Tweet
+      [FSI_0016.Data+Tweet
          {Author = "user3";
           Content = "#dosp #omg Have you guys completed the project? @user1 ";
           ReTweet = "";
-          TweetId = "132515208335418770";}]);
+          TweetId = "132515239516967540";}]);
      ("@user3",
-      [FSI_0021.Data+Tweet {Author = "user1";
+      [FSI_0016.Data+Tweet {Author = "user1";
                             Content = "#uf Go Gators! @user3 ";
                             ReTweet = "";
-                            TweetId = "132515208335392600";};
-       FSI_0021.Data+Tweet {Author = "user2";
+                            TweetId = "132515239516943870";};
+       FSI_0016.Data+Tweet {Author = "user2";
                             Content = "#dosp Twitter Clone! @user3 ";
                             ReTweet = "";
-                            TweetId = "132515208335414070";};
-       FSI_0021.Data+Tweet
+                            TweetId = "132515239516962940";};
+       FSI_0016.Data+Tweet
          {Author = "user1";
           Content = "#dosp #uf I think this is cool! @user3 ";
           ReTweet = "";
-          TweetId = "132515208335416700";}])]
+          TweetId = "132515239516965180";};
+       FSI_0016.Data+Tweet {Author = "user2";
+                            Content = "#uf Go Gators! @user3 ";
+                            ReTweet = "user1";
+                            TweetId = "132515239516982040";};
+       FSI_0016.Data+Tweet {Author = "user3";
+                            Content = "#uf Go Gators! @user3 ";
+                            ReTweet = "user1";
+                            TweetId = "132515239516988390";}])]
 ```
 
 Users fields
@@ -218,66 +310,4 @@ val it : User list =
                        UserName = "user2";};
    FSI_0006.Data+User {Password = "pw3";
                        UserName = "user3";}]
-```
-
-#### Query feature
-Query for hashtag:
-```F#
-> Simulator.QueryTag("#dosp");;
-
-val it : string =
-  "TweetID: 132515208335414070
-Content: #dosp Twitter Clone! @user3 
- Author: user2
-
-TweetID: 132515208335416700
-Content: #dosp #uf I think this is cool! @user3 
- Author: user1
-
-TweetID: 132515208335418770
-Content: #dosp #omg Have you guys completed the project? @user1 
- Author: user3
-
-"
-```
-
-Query for mentioned:
-```F#
-> Simulator.QueryMentioned("user3");;
-
-val it : string =
-  "TweetID: 132515208335392600
-Content: #uf Go Gators! @user3 
- Author: user1
-
-TweetID: 132515208335414070
-Content: #dosp Twitter Clone! @user3 
- Author: user2
-
-TweetID: 132515208335416700
-Content: #dosp #uf I think this is cool! @user3 
- Author: user1
-
-"
-```
-
-Query for subscribing list:
-```F#
-> Simulator.QuerySubscribedTo("user1", "pw1");;
-
-val it : string =
-  "TweetID: 132515216112257240
-Content: #dosp Twitter Clone! @user3 
- Author: user2
-
-TweetID: 132515216112275190
-Content: #uf Go Gators!
- Author: user2
-Retweet from: user1
-
-TweetID: 132515216112261430
-Content: #dosp #omg Have you guys completed the project? @user1 
- Author: user3
-
-"
 ```

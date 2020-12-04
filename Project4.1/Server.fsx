@@ -65,7 +65,7 @@ type Simulator() =
 
         if not (userTable.ContainsKey(username)) then
             this.NewUser(User(username, password))
-            response <- username + "Registered successfully"
+            response <- username + " Registered successfully"
 
         response
 
@@ -108,7 +108,6 @@ type Simulator() =
         // update MentionTable
         let mentions = ExtractTag(content, '@')
         for mention in mentions do
-            printf "%A" mention
             this.AddToMentionTable(mention, newTweet)
         // return the newly created tweet
         newTweet
@@ -252,6 +251,60 @@ let ReTweetHandler =
             }
         loop ()
 
+let QuerySubscribeHandler =
+    spawn system "QuerySubscribeHandler"
+    <| fun mailbox ->
+        let rec loop () =
+            actor {
+                let! message = mailbox.Receive()
+                let sender = mailbox.Sender()
+
+                match box message :?> Message with
+                | MsgQuery(username, password) ->
+                    let response = Simulator.QuerySubscribedTo(username, password)
+                    printfn "Query subscribing response for %A : %A" username response
+                    sender <? response |> ignore
+                | _ -> failwith "Exception"
+                return! loop ()
+            }
+        loop ()
+
+let QueryTagHandler =
+    spawn system "QueryTagHandler"
+    <| fun mailbox ->
+        let rec loop () =
+            actor {
+                let! message = mailbox.Receive()
+                let sender = mailbox.Sender()
+
+                match box message :?> Message with
+                | MsgQuery(hashtag, "") ->
+                    let response = Simulator.QueryTag(hashtag)
+                    printfn "Query hashtag response for %A : %A" hashtag response
+                    sender <? response |> ignore
+                | _ -> failwith "Exception"
+                return! loop ()
+            }
+        loop ()
+
+let QueryMentionHandler =
+    spawn system "QueryMentionHandler"
+    <| fun mailbox ->
+        let rec loop () =
+            actor {
+                let! message = mailbox.Receive()
+                let sender = mailbox.Sender()
+
+                match box message :?> Message with
+                | MsgQuery(mentioned, "") ->
+                    let response = Simulator.QueryMentioned(mentioned)
+                    printfn "Query mentioned response for %A : %A" mentioned response
+                    sender <? response |> ignore
+                | _ -> failwith "Exception"
+                return! loop ()
+            }
+        loop ()
+
 let APIsHandler =
     spawn system "APIsHandler"
     <| fun mailbox ->
@@ -290,6 +343,15 @@ let APIsHandler =
                     | "ReTweet" ->
                         handler <- system.ActorSelection(url + "ReTweetHandler")
                         msg <- MsgReTweet(username, password, arg1, arg2)
+                    | "Query" ->
+                        handler <- system.ActorSelection(url + "QuerySubscribeHandler")
+                        msg <- MsgQuery(username, password)
+                    | "Tag" ->
+                        handler <- system.ActorSelection(url + "QueryTagHandler")
+                        msg <- MsgQuery(commands.[1], "") // "hashtag"
+                    | "Mention" ->
+                        handler <- system.ActorSelection(url + "QueryMentionHandler")
+                        msg <- MsgQuery(commands.[1], "") // "mentioned_user"
 
                     let res = Async.RunSynchronously(handler <? msg, 1000)
                     sender <? res |> ignore
