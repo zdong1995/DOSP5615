@@ -1,28 +1,49 @@
 # Twitter Clone
 Twitter clone using F#.
 
-## Twitter Server
+### Group Member:
+- Zhang Dong, UFID: 69633983
+- Xiaobai Li, UFID: 31567109
+
+## Functionality
+
+In this project, a Twitter Enginee Clone with support to following functionality was designed:
+- Register account and Authenticatios
+- Send tweet with support to auto-parse multiple hashtags and mentions from the content. e.g. `#dosp #uf Twitter clone is so cool! @twitter @gators`
+- Subscribe to user's tweets
+- Re-tweets with identification of re-tweets source
+- Querying tweets subscribed to, tweets with specific hashtags, tweets in which the user is mentioned
+- If the user is connected, deliver the above types of tweets live (without querying)
+
+Also a tester/simulator to test the above was implemented with support to:
+- Simulate as many users as you can
+- Simulate periods of live connection and disconnection for users
+- Simulate a Zipf distribution on the number of subscribers
+
+## Implementation
+
+The infrastructure of Twitter Enginee is as following:
+
+![](https://github.com/zdong1995/DOSP5615/blob/master/Project4.1/img/Infra.jpg)
 
 ### Database Management
 
-To simplify the simulator, we use 4 HashTable to store the data to simulate database and relations.
+To simplify the simulator, we use 4 HashTable to store the data to simulate database and relations. It will similar to NoSQL database but easier to implement and rapid to retrieve relational data pair.
+
 - tweetTable: `<tweetId, Tweet>`
 - userTable: `<userName, User>`
 - tagtTable: `<tag, Tweet List>`
 - mentionTable: `<mentionedUser, Tweet List>`
 
-### Server Infrastructure
+### Server Infrastrcuture
 
-- `NewUser(User)`
-- `Auth(username, password)`: Return boolean for whether successful authenticated.
-- `NewTweet(Tweet)`
-- `AddToTagTable(hashTag, Tweet)`: Add one tweet to tagTable, if tag not exist, create one new record and add the tweet
-- `ExtractTag(String, Tag)`: Auto parse hashtag and mention from tweet. **The hashtag and mention need has one space after the tag itself**. For example: "#dosp @Twitter clone is so cool! @uf "
-- `SendTweet(username, password, content)`: Sent tweet after authentication, auto-parse hashtag from content and update TagTable
+For the server side, we use Actor as distributed microservice for different module and use a singleton `Simulator` to realize the business logic. There will be one actor `APIsHandler` as the gateway to communicate with clients, the received message will be distributed to each microservice actor `FunctionHandler` based on message type. Each `FunctionHandler` will invoke the APIs of `Simulator` and process the bussiness logic to modify the database table. Then the response will be parsed from API response to `FunctionHandler`, then `APIsHandler`, finally reached back to client.
 
-## Data types
+There are four class elaborately designed in server side, which are `User`, `Tweet`, `Message` and `Simulator`. Object-Oriented Design with encapsulation has been fullfilled to design the class.
 
-### User
+### Class
+
+#### User
 Fields:
 - username: `string`
 - password: `string`
@@ -37,14 +58,50 @@ Methods:
 - `SubsribeTo(User)`: subsribeTo another user
 - `SendTweet(Tweet)`: update tweet to its tweetlist
 
-### Tweeter
+#### Tweet
 Fields:
 - Content: `string`
-- tweetId: `string`
-- author: `string`
+- TweetId: `string`
+- Author: `string`
+- ReTweet: `string`, will be empty for original tweet
 
-## Test
-Run `Test.fsx` file and you should receive the following expected result:
+#### Message
+The `Message` is an assemble struct class with following type:
+
+- MsgAccount of `string * string`: ("username", "password")
+- MsgTweet of `string * string * string`: ("username", "password", "content")
+- MsgFollow of `string * string * string`: ("username", "password", "toFollow")
+- MsgReTweet of `string * string * string * string`: ("username", "password", "content", "reTweetFrom")
+- MsgQuery of `string`: "hastag"/"mentionedUser"/"curUser"
+- MsgEmpty of `string`
+
+### Simulator
+The `Simulator` is a class to support the business logic with following method:
+
+- Update database talbe: `NewUser(User)`, `AddToTagTable(hashTag, Tweet)`, `AddToMentionTable(mentionedUser, Tweet)`
+- Account management: `Register(username, password)`, `Login(username, password)`
+- `NewTweet(username, password, content)`: Create new tweet and auto-parse hashtag and mentioned users from content, update `TagTable`, `TweetTable`, `MentionTable` and user's filed
+- Tweet: `SendTweet(username, password, content)`, `ReTweet(username, password, content, reTweetFrom)`
+- `Follow(username, password, toFollow)`: Subscribed to corresponding user after successful authentication
+- Query: `QuerySubscribed(username)`, `QueryMentioned(username)`, `QueryTag(hashtag)`
+
+### Handlers
+
+Remote acotrs was used to implement microservice-like handlers:
+- Gateway: `APIsHandler`
+- `RegisterHandler`, `LoginHandler`, `FollowHandler`, `TweetHandler`, `RetweetHandler`, `QuerySubscribeHandler`, `QueryTagHandler`, `QueryMentionHandler`
+
+The message from client to `APIsHandler` will be `string`, and the message between `Handler`s are `Message` type.
+
+## Usage
+
+The command message from client should be in the following format:
+```
+operation|username|password|arg1|arg2
+```
+
+The value of `arg1` and `arg2` will depend on the operations we want, which is showed in the following example:
+
 ```F#
 let service = system.ActorSelection(url + "APIsHandler")
 // command should have length = 5
@@ -71,6 +128,13 @@ service <? "Query|user1|||" |> Async.Ignore |> Async.RunSynchronously |> ignore
 service <? "Tag|#dosp|||" |> Async.Ignore |> Async.RunSynchronously |> ignore
 service <? "Mention|user3|||" |> Async.Ignore |> Async.RunSynchronously |> ignore
 ```
+
+**!!** The hashtag and mention should always have one space after it.
+
+### Test
+
+Run `Test.fsx` file and you should receive the following expected result.
+
 ### Service logic
 
 ```shell
