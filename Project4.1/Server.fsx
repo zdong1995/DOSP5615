@@ -119,8 +119,8 @@ type Simulator() =
         if not (this.Login(username, password)) then
             response <- "Error! Please check your login information!"
         else
-            this.NewTweet(username, password, content) |> ignore
-            response <- "Success"
+            let curTweet = this.NewTweet(username, password, content)
+            response <- "Tweet success!\n" + curTweet.Serializer()
         response
     
     // re-tweet after authentication, update reTweetFrom for retweets
@@ -131,7 +131,7 @@ type Simulator() =
         else
             let curTweet = this.NewTweet(username, password, content)
             curTweet.ReTweet <- reTweetFrom
-            response <- "Success"
+            response <- "ReTweet success!\n" + curTweet.Serializer()
         response
 
     // subscribe to another user
@@ -189,7 +189,7 @@ let RegisterHandler =
                 match box message :?> Message with
                 | MsgAccount(username, password) ->
                     let response = Simulator.Register(username, password)
-                    printfn "Register response for %A: %A " username response
+                    // printfn "Register response for %A: %A " username response
                     sender <? response |> ignore
                 | _ -> failwith "Exception"
                 return! loop ()
@@ -207,7 +207,7 @@ let LoginHandler =
                 match box message :?> Message with
                 | MsgAccount(username, password) ->
                     let response = Simulator.Login(username, password)
-                    printfn "Login response for %A: %A " username response |> string
+                    // printfn "Login response for %A: %A " username response |> string
                     sender <? response |> ignore
                 | _ -> failwith "Exception"
                 return! loop ()
@@ -225,7 +225,7 @@ let FollowHandler =
                 match box message :?> Message with
                 | MsgFollow(username, password, toFollow) ->
                     let response = Simulator.Follow(username, password, toFollow)
-                    printfn "Follow response for %A: %A " username response
+                    // printfn "Follow response for %A: %A " username response
                     sender <? response |> ignore
                 | _ -> failwith "Exception"
                 return! loop ()
@@ -243,7 +243,7 @@ let TweetHandler =
                 match box message :?> Message with
                 | MsgTweet(username, password, content) ->
                     let response = Simulator.SendTweet(username, password, content)
-                    printfn "Tweet response for %A: %A " username response
+                    // printfn "Tweet response for %A: %A " username response
                     sender <? response |> ignore
                 | _ -> failwith "Exception"
                 return! loop ()
@@ -261,7 +261,7 @@ let ReTweetHandler =
                 match box message :?> Message with
                 | MsgReTweet(username, password, content, reTweetFrom) ->
                     let response = Simulator.ReTweet(username, password, content, reTweetFrom)
-                    printfn "ReTweet response for %A: %A " username response
+                    // printfn "ReTweet response for %A: %A " username response
                     sender <? response |> ignore
                 | _ -> failwith "Exception"
                 return! loop ()
@@ -279,7 +279,7 @@ let QuerySubscribeHandler =
                 match box message :?> Message with
                 | MsgQuery(username) ->
                     let response = Simulator.QuerySubscribed(username)
-                    printfn "Query subscribing response for %A : %A" username response
+                    // printfn "Query subscribing response for %A : %A" username response
                     sender <? response |> ignore
                 | _ -> failwith "Exception"
                 return! loop ()
@@ -297,7 +297,7 @@ let QueryTagHandler =
                 match box message :?> Message with
                 | MsgQuery(hashtag) ->
                     let response = Simulator.QueryTag(hashtag)
-                    printfn "Query hashtag response for %A : %A" hashtag response
+                    // printfn "Query hashtag response for %A : %A" hashtag response
                     sender <? response |> ignore
                 | _ -> failwith "Exception"
                 return! loop ()
@@ -315,7 +315,7 @@ let QueryMentionHandler =
                 match box message :?> Message with
                 | MsgQuery(mentioned) ->
                     let response = Simulator.QueryMentioned(mentioned)
-                    printfn "Query mentioned response for %A : %A" mentioned response
+                    // printfn "Query mentioned response for %A : %A" mentioned response
                     sender <? response |> ignore
                 | _ -> failwith "Exception"
                 return! loop ()
@@ -373,8 +373,9 @@ let APIsHandler =
                         handler <- system.ActorSelection(url + "QueryMentionHandler")
                         msg <- MsgQuery(username) // "mentioned_user"
 
-                    let res = Async.RunSynchronously(handler <? msg, 1000)
+                    let res = Async.RunSynchronously(handler <? msg, 100)
                     sender <? res |> ignore
+                    // printf "%A" res
                 return! loop ()
             }
         loop ()

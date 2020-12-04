@@ -24,7 +24,7 @@ type ClientMsg =
     | LogOut of String
     | Follow of String * String * String // (userId * password * toFollowId) 
     | Tweet of String * String * String // (userId * password * content)
-    | ReTweet of String * String * String // (curUserId * password * tweetId)
+    | ReTweet of String * String * String * String // (curUserId * password * tweetId)
     | Query of String * String   // (Query type * [hasTag, mentionedId, curUserId]  --- for Query type : 0. only hashTag 1. only mentioned 2. hashTag and mentioned)
     | AutoQuery of string 
     
@@ -38,44 +38,49 @@ let client (name : string) =
             let rec loop() =
                 actor {
                     let! message = mailbox.Receive()
+                    let sender = mailbox.Sender()
+                    let mutable cmd = ""
+                    let mutable res = ""
                     match box message :?> ClientMsg with
-                    | Register(userId, password) ->
-                        // printfn "%s receive the reg message from console" userId
-                        let cmd = "Register|" + userId + "|" + password + "||"
-                        server <? cmd |> Async.RunSynchronously
-                    
                     | LogIn(userId, password) ->
                         // printfn "%s receive the login message from console" userId
-                        let cmd = "Login|" + userId + "|" + password + "||"
+                        cmd <- "Login|" + userId + "|" + password + "||"
                         let mutable auth = false
-                        auth <- Async.RunSynchronously(server <? cmd, 1000)
+                        auth <- Async.RunSynchronously(server <? cmd)
+                        res <- auth |> string
                         if auth then
                             logInStatus <- true
                             let client = system.ActorSelection(url + userId)
-                            client <? AutoQuery(userId) 
+                            client <? AutoQuery(userId) |> ignore
 
                     | LogOut(userId) ->
                         logInStatus <- false
+                        res <- Async.RunSynchronously(server <? cmd) |> string
+                    | _ -> match box message :?> ClientMsg with
+                    | Register(userId, password) ->
+                        // printfn "%s receive the reg message from console" userId
+                        cmd <- "Register|" + userId + "|" + password + "||"
+                        res <- Async.RunSynchronously(server <? cmd) |> string
 
                     | Follow(userId, password, toFollowId) ->
                         // printfn "%s receive the follow message from console to follow %s" userId toFollowId
-                        let cmd = "Follow|" + userId + "|" + password + "|" + toFollowId + "|"
-                        server <? cmd |> Async.RunSynchronously
+                        cmd <- "Follow|" + userId + "|" + password + "|" + toFollowId + "|"
+                        res <- Async.RunSynchronously(server <? cmd) |> string
 
                     | Tweet(authorId, password, content) ->
                         // printfn "%s receive the tweet message from console and the content is : %s" authorId content
-                        let cmd = "Tweet|" + authorId + "|" + password + "|" + content + " |"
+                        cmd <- "Tweet|" + authorId + "|" + password + "|" + content + " |"
                         // printfn "%s" cmd
-                        server <? cmd |> Async.RunSynchronously
+                        res <- Async.RunSynchronously(server <? cmd) |> string
 
-                    | ReTweet(userId, password, oldContent) ->
+                    | ReTweet(userId, password, oldContent, fromUser) ->
                         printfn "%s receive the tweet message from console and the content is : %s" userId oldContent
-                        let cmd = "ReTweet|" + userId + "|" + password + "|" + oldContent + " |"
-                        server <? cmd |> Async.RunSynchronously
+                        cmd <- "ReTweet|" + userId + "|" + password + "|" + oldContent + "|" + fromUser
+                        res <- Async.RunSynchronously(server <? cmd) |> string
 
                     | Query(arg0, arg1) ->
-                        let cmd = arg0 + "|" + arg1 + "|||" // arg0 = "Tag"/"Mention"
-                        server <? cmd |> Async.RunSynchronously
+                        cmd <- arg0 + "|" + arg1 + "|||" // arg0 = "Tag"/"Mention"
+                        res <- Async.RunSynchronously(server <? cmd) |> string
 
                     | AutoQuery(userId) ->()
                         // while logInStatus do
@@ -83,10 +88,59 @@ let client (name : string) =
                         //     server <? cmd |> ignore
                         //     Thread.Sleep 10000   
 
+                    sender <? res |> ignore
+                    // printf "%A" res
                     return! loop()
                 }
             loop()  
 
+printfn "--------------Register Users----------------"
+
+// register users
+for i = 1 to 10 do
+    let userId = "user" + string i
+    client userId |> ignore
+    let client = system.ActorSelection(url + userId)
+    let password = userId + "_password"
+    let res = Async.RunSynchronously(client <? Register(userId, password)) |> string
+    printfn "%s" res // need cast the response to string to print
+    Thread.Sleep 20
+
+printfn "--------------Login Users----------------"
+
+// login users
+for i = 1 to 10 do
+    let userId = "user" + string i
+    let client = system.ActorSelection(url + userId)
+    let password = userId + "_password"
+    let res = Async.RunSynchronously(client <? LogIn(userId, password)) |> string
+    printfn "%s" res // need cast the response to string to print
+    Thread.Sleep 20
+    
+
+printfn "--------------Tweet----------------"
+
+// login users
+for i = 1 to 10 do
+    let userId = "user" + string i
+    let client = system.ActorSelection(url + userId)
+    let password = userId + "_password"
+    let res = Async.RunSynchronously(client <? Tweet(userId, password, "This is a tweet from" + userId )) |> string
+    printfn "%s" res // need cast the response to string to print
+    Thread.Sleep 20
+
+printfn "--------------ReTweet----------------"
+
+// login users
+for i = 2 to 10 do
+    let userId = "user" + string i
+    let lastUser = "user" + string (i - 1)
+    let client = system.ActorSelection(url + userId)
+    let password = userId + "_password"
+    let res = Async.RunSynchronously(client <? ReTweet(userId, password, "This is a tweet from" + lastUser, lastUser )) |> string
+    printfn "%s" res // need cast the response to string to print
+    Thread.Sleep 20
+        
 let test() = 
     let size = 10
     let rand = System.Random()
@@ -202,7 +256,7 @@ let test() =
 
     //     else 
     //         client <? LogIn(userId, password) |> ignore
-test()
+//test()
     
 
 
