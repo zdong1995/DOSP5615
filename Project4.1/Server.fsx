@@ -71,10 +71,11 @@ type Simulator() =
 
     // authentication to return whether login success or fails (bool)
     member this.Login(username: string, password: string) =
-        try
-            userTable.ContainsKey(username)
-            && (userTable.[username].Password = password)
-        with :? KeyNotFoundException -> false
+        let mutable response = false
+        if userTable.ContainsKey(username)
+            && (userTable.[username].Password = password) then
+            response <- true
+        response
 
     // add one tweet to tagTable, if tag not exist, create one new record and add the tweet
     member this.AddToTagTable(hashTag: string, tweet: Tweet) =
@@ -149,17 +150,15 @@ type Simulator() =
                 response <- "User not existed. Please check the user information"
         response
 
-    // query of all tweets that user subscribed to, login needed
-    member this.QuerySubscribedTo(username: string, password: string) =
+    // query of all tweets that user subscribed to after the use logined in
+    member this.QuerySubscribed(username: string) =
+        // assumtion: username will be valid and exist in userTable
         let mutable response = ""
-        if not (this.Login(username, password)) then
-            response <- "Error! Please check your login information!"
-        else
-            let user = this.GetUser(username)
-            let followingList = user.GetSubscribingList()
+        let user = this.GetUser(username)
+        let followingList = user.GetSubscribingList()
 
-            for i in followingList do
-                response <- response + SerializeList(i.GetTweetList())
+        for i in followingList do
+            response <- response + SerializeList(i.GetTweetList())
         response
 
     // query of all tweets that user was mentioned, not need login
@@ -188,9 +187,27 @@ let RegisterHandler =
                 let sender = mailbox.Sender()
 
                 match box message :?> Message with
-                | MsgRegister(username, password) ->
+                | MsgAccount(username, password) ->
                     let response = Simulator.Register(username, password)
                     printfn "Register response for %A: %A " username response
+                    sender <? response |> ignore
+                | _ -> failwith "Exception"
+                return! loop ()
+            }
+        loop ()
+
+let LoginHandler =
+    spawn system "LoginHandler"
+    <| fun mailbox ->
+        let rec loop () =
+            actor {
+                let! message = mailbox.Receive()
+                let sender = mailbox.Sender()
+
+                match box message :?> Message with
+                | MsgAccount(username, password) ->
+                    let response = Simulator.Login(username, password)
+                    printfn "Login response for %A: %A " username response |> string
                     sender <? response |> ignore
                 | _ -> failwith "Exception"
                 return! loop ()
@@ -260,8 +277,8 @@ let QuerySubscribeHandler =
                 let sender = mailbox.Sender()
 
                 match box message :?> Message with
-                | MsgQuery(username, password) ->
-                    let response = Simulator.QuerySubscribedTo(username, password)
+                | MsgQuery(username) ->
+                    let response = Simulator.QuerySubscribed(username)
                     printfn "Query subscribing response for %A : %A" username response
                     sender <? response |> ignore
                 | _ -> failwith "Exception"
@@ -278,7 +295,7 @@ let QueryTagHandler =
                 let sender = mailbox.Sender()
 
                 match box message :?> Message with
-                | MsgQuery(hashtag, "") ->
+                | MsgQuery(hashtag) ->
                     let response = Simulator.QueryTag(hashtag)
                     printfn "Query hashtag response for %A : %A" hashtag response
                     sender <? response |> ignore
@@ -296,7 +313,7 @@ let QueryMentionHandler =
                 let sender = mailbox.Sender()
 
                 match box message :?> Message with
-                | MsgQuery(mentioned, "") ->
+                | MsgQuery(mentioned) ->
                     let response = Simulator.QueryMentioned(mentioned)
                     printfn "Query mentioned response for %A : %A" mentioned response
                     sender <? response |> ignore
@@ -333,7 +350,10 @@ let APIsHandler =
                     match operation with
                     | "Register" ->
                         handler <- system.ActorSelection(url + "RegisterHandler")
-                        msg <- MsgRegister(username, password)
+                        msg <- MsgAccount(username, password)
+                    | "Login" ->
+                        handler <- system.ActorSelection(url + "LoginHandler")
+                        msg <- MsgAccount(username, password)
                     | "Follow" ->
                         handler <- system.ActorSelection(url + "FollowHandler")
                         msg <- MsgFollow(username, password, arg1)
@@ -345,13 +365,13 @@ let APIsHandler =
                         msg <- MsgReTweet(username, password, arg1, arg2)
                     | "Query" ->
                         handler <- system.ActorSelection(url + "QuerySubscribeHandler")
-                        msg <- MsgQuery(username, password)
+                        msg <- MsgQuery(username)
                     | "Tag" ->
                         handler <- system.ActorSelection(url + "QueryTagHandler")
-                        msg <- MsgQuery(commands.[1], "") // "hashtag"
+                        msg <- MsgQuery(commands.[1]) // "hashtag"
                     | "Mention" ->
                         handler <- system.ActorSelection(url + "QueryMentionHandler")
-                        msg <- MsgQuery(commands.[1], "") // "mentioned_user"
+                        msg <- MsgQuery(username) // "mentioned_user"
 
                     let res = Async.RunSynchronously(handler <? msg, 1000)
                     sender <? res |> ignore

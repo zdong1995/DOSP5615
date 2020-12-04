@@ -1,13 +1,18 @@
 # Twitter Clone
 Twitter clone using F#.
 
-## Simple Version Twitter Server
-Use three HashTable to store the data to simulate database.
+## Twitter Server
+
+### Database Management
+
+To simplify the simulator, we use 4 HashTable to store the data to simulate database and relations.
 - tweetTable: `<tweetId, Tweet>`
 - userTable: `<userName, User>`
 - tagtTable: `<tag, Tweet List>`
+- mentionTable: `<mentionedUser, Tweet List>`
 
-Currently provide following features:
+### Server Infrastructure
+
 - `NewUser(User)`
 - `Auth(username, password)`: Return boolean for whether successful authenticated.
 - `NewTweet(Tweet)`
@@ -59,7 +64,12 @@ service <? "Tweet|user2|pw2|#dosp Twitter Clone! @user3 |" |> ignore
 service <? "Tweet|user1|pw1|#dosp #uf I think this is cool! @user3 |" |> ignore
 service <? "Tweet|user3|pw3|#dosp #omg Have you guys completed the project? @user1 |" |> ignore
 // ReTweet
-service <? "ReTweet|user2|pw2|#uf Go Gators!|user1" |> ignore
+service <? "ReTweet|user2|pw2|#uf Go Gators! @user3 |user1" |> ignore
+service <? "ReTweet|user3|pw3|#uf Go Gators! @user3 |user1" |> ignore
+// Query
+service <? "Query|user1|||" |> Async.Ignore |> Async.RunSynchronously |> ignore
+service <? "Tag|#dosp|||" |> Async.Ignore |> Async.RunSynchronously |> ignore
+service <? "Mention|user3|||" |> Async.Ignore |> Async.RunSynchronously |> ignore
 ```
 ### Service logic
 

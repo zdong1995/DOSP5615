@@ -22,6 +22,9 @@ let main() =
     service <? "Register|user1|pw1||" |> ignore
     service <? "Register|user2|pw2||" |> ignore
     service <? "Register|user3|pw3||" |> ignore
+    // Login
+    service <? "Login|user1|pw1||" |> ignore
+    service <? "Login|user1|pw2||" |> ignore
     // Follow
     service <? "Follow|user1|pw1|user0|" |> ignore
     service <? "Follow|user1|pw1|user2|" |> ignore
@@ -36,7 +39,7 @@ let main() =
     service <? "ReTweet|user2|pw2|#uf Go Gators! @user3 |user1" |> ignore
     service <? "ReTweet|user3|pw3|#uf Go Gators! @user3 |user1" |> ignore
     // Query
-    service <? "Query|user1|pw1||" |> Async.Ignore |> Async.RunSynchronously |> ignore
+    service <? "Query|user1|||" |> Async.Ignore |> Async.RunSynchronously |> ignore
     service <? "Tag|#dosp|||" |> Async.Ignore |> Async.RunSynchronously |> ignore
     service <? "Mention|user3|||" |> Async.Ignore |> Async.RunSynchronously |> ignore
 main()

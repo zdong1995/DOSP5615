@@ -1,11 +1,13 @@
 #load "./Data.fsx"
 #load "./Actor.fsx"
+#load "./Server.fsx"
 #r "nuget: Akka.FSharp"
 #r "nuget: Akka.TestKit"
 #r "nuget: Akka.Remote"
 
 open Data
 open Actor
+open Server
 
 open System
 open System.Threading
@@ -17,17 +19,17 @@ open Akka.TestKit
 open Akka.Remote
 
 type ClientMsg =
-    |Register of String * String // (userId * passWord)   
-    |LogIn of String * String 
-    |LogOut of String
-    |Follow of String * String * String // (userId * password * followUserId) 
-    |Tweet of String * String * String // (userId * password * content)
-    |ReTweet of String * String * String // (curUserId * password * tweetId)
-    |Query of int * String[]   // (Query type * [hasTag, mentionedId, curUserId]  --- for Query type : 0. only hashTag 1. only mentioned 2. hashTag and mentioned)
-    |AutoQuery of string 
+    | Register of String * String // (userId * passWord)   
+    | LogIn of String * String 
+    | LogOut of String
+    | Follow of String * String * String // (userId * password * followUserId) 
+    | Tweet of String * String * String // (userId * password * content)
+    | ReTweet of String * String * String // (curUserId * password * tweetId)
+    | Query of String * String   // (Query type * [hasTag, mentionedId, curUserId]  --- for Query type : 0. only hashTag 1. only mentioned 2. hashTag and mentioned)
+    | AutoQuery of string 
     
 
-let server = system.ActorSelection("APIsHandler")
+let server = system.ActorSelection(url + "APIsHandler")
 
 let client (name : string) = 
     let mutable logInStatus = false
@@ -39,32 +41,36 @@ let client (name : string) =
                     let! message = mailbox.Receive()
                     match box message :?> ClientMsg with
                     | Register(userId, password) ->
-                        let cmd = "Register, " + userId + ", " + password + ", " + "arg1"
+                        let cmd = "Register|" + userId + "|" + password + "|" + "arg1" + "|"
                         server <? cmd |> Async.RunSynchronously
                     
                     | LogIn(userId, password) ->
                         logInStatus <- true
-                        let client = system.ActorSelection(userId)
+                        let client = system.ActorSelection(url + userId)
                         client <? AutoQuery(userId) 
 
                     | LogOut(userId) ->
                         logInStatus <- false
 
                     | Follow(userId, password, followUserId) ->
-                        let cmd = "Follow, " + userId + ", " + password + ", " + "followUserId"
+                        let cmd = "Follow|" + userId + "|" + password + "|" + "followUserId" + "|"
                         server <? cmd |> Async.RunSynchronously
 
                     | Tweet(authorId, password, content) ->
-                        let cmd = "Tweet, " + authorId + ", " + password + ", " + content 
+                        let cmd = "Tweet|" + authorId + "|" + password + "|" + content 
                         server <? cmd |> Async.RunSynchronously
 
                     | ReTweet(userId, password, oldTweetId) ->
-                        let cmd = "ReTweet, " + userId + ", " + password + ", " + oldTweetId
+                        let cmd = "ReTweet|" + userId + "|" + password + "|" + oldTweetId
+                        server <? cmd |> Async.RunSynchronously
+
+                    | Query(arg0, arg1) ->
+                        let cmd = arg0 + "|" + arg1 + "|||" // arg0 = "Tag"/"Mention"
                         server <? cmd |> Async.RunSynchronously
 
                     | AutoQuery(userId) ->
                         while logInStatus do
-                            let cmd = "AutoQuery, " + userId  
+                            let cmd = "Query|"  + userId + "|||" 
                             server <? cmd |> ignore
                             Thread.Sleep 10000   
 
