@@ -133,6 +133,17 @@ service <? "Mention|user3|||" |> Async.Ignore |> Async.RunSynchronously |> ignor
 
 ### Test
 
+The test workflow is showed as following:
+
+![](https://github.com/zdong1995/DOSP5615/blob/twitter/Project4.1/img/Workflow.jpg)
+
+There are two ways to run the test for this simulator:
+
+- Run `Test.fsx` file to test the APIs and the correctness of the server.
+- Run `Client.fsx` file to test the Cliend-Server communication.
+
+### Service logic Test using `Test.fsx`
+
 Run `Test.fsx` file and you should receive the following expected result.
 
 ### Service logic
