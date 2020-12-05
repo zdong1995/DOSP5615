@@ -105,6 +105,17 @@ let client (name : string) =
 let args : string array = fsi.CommandLineArgs |> Array.tail
 let mutable numClients = args.[0] |> int
 
+let mutable regTime = 0.0
+let mutable logInTime = 0.0
+let mutable fTime = 0.0
+
+let mutable tTime = 0.0
+let mutable rtTime = 0.0
+
+let mutable uqTime = 0.0
+let mutable tqTime = 0.0
+let mutable mqTime = 0.0
+
 let test() = 
     let rand = System.Random()
     let mutable logInStaMap = new Map<String, Boolean>([])
@@ -125,8 +136,7 @@ let test() =
         printfn "the zip num for %i is : %i" i zip
 
     printfn "--------------Register Users----------------"
-
-    // register users
+    let watch = System.Diagnostics.Stopwatch.StartNew()
     for i = 1 to numClients do
         let userId = "user" + string i
         client userId |> ignore
@@ -136,8 +146,12 @@ let test() =
         printfn "%s" res // need cast the response to string to print
         Thread.Sleep 5
 
+    watch.Stop()
+    regTime <- watch.Elapsed.TotalMilliseconds
+
     printfn "--------------Login Users----------------"
 
+    let watch = System.Diagnostics.Stopwatch.StartNew()
     for i = 1 to numClients do
         let userId = "user" + string i
         let client = system.ActorSelection(url + userId)
@@ -146,8 +160,12 @@ let test() =
         printfn "%s" res // need cast the response to string to print
         Thread.Sleep 5
         
+    watch.Stop()
+    logInTime <- watch.Elapsed.TotalMilliseconds
+
     printfn "-------------Follow Users----------------"
 
+    let watch = System.Diagnostics.Stopwatch.StartNew()
     for i = 1 to numClients do 
        let followers : int Set = Set.empty       
        let followerId = "user" + string i
@@ -170,9 +188,12 @@ let test() =
             
            subscribeMap <- subscribeMap.Add(followerId, List.append subscribeMap.[followerId] [toFollowId])      
 
+    watch.Stop()
+    fTime <- watch.Elapsed.TotalMilliseconds
 
     printfn "--------------Tweet----------------"
 
+    let watch = System.Diagnostics.Stopwatch.StartNew()
     for i = 1 to numClients do
         let userId = "user" + string i
         let client = system.ActorSelection(url + userId)
@@ -180,13 +201,23 @@ let test() =
         let tweetNum = zipfMap.Item(i)
         for j = 1 to tweetNum do
             let index = string j
-            let content = "This is a tweet and index is " + index + "from "  + userId
+            let tagContent = "#Tag" + string (i % 5)
+            let mutable mentionInd = (i+3) % numClients
+            if mentionInd = 0 then 
+                mentionInd <- mentionInd + 1
+            let mentionId = "user" + string mentionInd
+            let content = tagContent + " This is a tweet and index is " + index + " from "  + userId + " @" + mentionId
+            printfn "%s" content
             let res = Async.RunSynchronously(client <? Tweet(userId, password, content)) |> string
             printfn "%s" res // need cast the response to string to print
             Thread.Sleep 5
 
+    watch.Stop()
+    tTime <- watch.Elapsed.TotalMilliseconds
+
     printfn "--------------ReTweet----------------"
 
+    let watch = System.Diagnostics.Stopwatch.StartNew()
     for i = 2 to numClients do
         let userId = "user" + string i
         let lastUser = "user" + string (i - 1)
@@ -195,9 +226,59 @@ let test() =
         let res = Async.RunSynchronously(client <? ReTweet(userId, password, "This is a tweet from " + lastUser, lastUser )) |> string
         printfn "%s" res // need cast the response to string to print
         Thread.Sleep 5
+    
+    watch.Stop()
+    rtTime <- watch.Elapsed.TotalMilliseconds
 
-let stopWatch = System.Diagnostics.Stopwatch.StartNew()
+    printfn "--------------UserId Query----------------"
+    let uqWatch = System.Diagnostics.Stopwatch.StartNew()
+    for i = 1 to numClients do
+        let userId = "user" + string i
+        let client = system.ActorSelection(url + userId)
+        let tagContent = "#Tag" + string (i % 5)
+
+        let res1 = Async.RunSynchronously(client <? Query(0, userId)) |> string
+        printfn "%s" res1
+        Thread.Sleep 5
+
+    uqWatch.Stop()
+    uqTime <- uqWatch.Elapsed.TotalMilliseconds
+
+
+    printfn "--------------Tag Query----------------"
+    let tqWatch = System.Diagnostics.Stopwatch.StartNew()
+    for i = 1 to numClients do
+        let userId = "user" + string i
+        let client = system.ActorSelection(url + userId)
+        let tagContent = "#Tag" + string (i % 5)
+
+        let res2 = Async.RunSynchronously(client <? Query(1, tagContent)) |> string
+        printfn "%s" res2
+        Thread.Sleep 5
+    tqWatch.Stop()
+    tqTime <- tqWatch.Elapsed.TotalMilliseconds
+
+    printfn "--------------Mentioned Query----------------"
+    let mqWatch = System.Diagnostics.Stopwatch.StartNew()
+    for i = 1 to numClients do
+        let userId = "user" + string i
+        let client = system.ActorSelection(url + userId)
+
+        let res3 = Async.RunSynchronously(client <? Query(2, userId)) |> string
+        Thread.Sleep 5
+        printfn "%s" res3
+
+    mqWatch.Stop()
+    mqTime <- mqWatch.Elapsed.TotalMilliseconds
+
+
 test()
-stopWatch.Stop()
-printfn "----------------RunningTime----------------"
-printfn "%f ms" stopWatch.Elapsed.TotalMilliseconds
+printfn "----------------RunningTime Measuring----------------"
+printfn "the Registration time is : %f ms" regTime
+printfn "the Log In time is : %f ms" logInTime
+printfn "the Follow time is : %f ms" fTime
+printfn "the Tweet time is : %f ms" tTime
+printfn "the ReTweet time is : %f ms" rtTime
+printfn "the UserId Query runing time is : %f ms" uqTime
+printfn "the Tag Query runing time is : %f ms" tqTime
+printfn "the Mentioned Query runing time is : %f ms" mqTime
