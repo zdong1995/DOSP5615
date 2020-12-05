@@ -20,14 +20,13 @@ open Akka.Remote
 
 type ClientMsg =
     | Register of String * String // (userId * passWord)   
-    | LogIn of String * String 
+    | LogIn of String * String // （userId * passWord）
     | LogOut of String
-    | Follow of String * String * String // (userId * password * followUserId) 
+    | Follow of String * String * String // (userId * password * toFollowId) 
     | Tweet of String * String * String // (userId * password * content)
-    | ReTweet of String * String * String // (curUserId * password * tweetId)
-    | Query of String * String   // (Query type * [hasTag, mentionedId, curUserId]  --- for Query type : 0. only hashTag 1. only mentioned 2. hashTag and mentioned)
+    | ReTweet of String * String * String * String // (curUserId * password * tweetContent * oldAuthorId)
+    | Query of int * String   // (Query type * [hasTag, mentionedId, curUserId]  --- for Query type : 0. only hashTag 1. only mentioned 2. hashTag and mentioned)
     | AutoQuery of string 
-    
 
 let server = system.ActorSelection(url + "APIsHandler")
 
@@ -37,133 +36,168 @@ let client (name : string) =
     <| fun mailbox ->
             let rec loop() =
                 actor {
-                    // let server = system.ActorSelection(url + "server")
                     let! message = mailbox.Receive()
+                    let sender = mailbox.Sender()
+                    let mutable cmd = ""
+                    let mutable res = ""
                     match box message :?> ClientMsg with
-                    | Register(userId, password) ->
-                        let cmd = "Register|" + userId + "|" + password + "||"
-                        server <? cmd |> Async.RunSynchronously
-                    
+
                     | LogIn(userId, password) ->
-                        let cmd = "Login|" + userId + "|" + password + "||"
+                        // printfn "%s receive the login message from console" userId
+                        cmd <- "Login|" + userId + "|" + password + "||"
                         let mutable auth = false
-                        auth <- Async.RunSynchronously(server <? cmd, 1000)
-                        if auth = true then
+                        auth <- Async.RunSynchronously(server <? cmd)
+                        res <- auth |> string
+                        if auth then
                             logInStatus <- true
                             let client = system.ActorSelection(url + userId)
-                            client <? AutoQuery(userId) 
+                            client <? AutoQuery(userId) |> ignore
 
                     | LogOut(userId) ->
                         logInStatus <- false
+                        // TODO
+                    
+                    | Register(userId, password) ->
+                        // printfn "%s receive the reg message from console" userId
+                        cmd <- "Register|" + userId + "|" + password + "||"
+                        res <- Async.RunSynchronously(server <? cmd) |> string
 
-                    | Follow(userId, password, followUserId) ->
-                        let cmd = "Follow|" + userId + "|" + password + "|" + "followUserId" + "|"
-                        server <? cmd |> Async.RunSynchronously
+                    | Follow(userId, password, toFollowId) ->
+                        // printfn "%s receive the follow message from console to follow %s" userId toFollowId
+                        cmd <- "Follow|" + userId + "|" + password + "|" + toFollowId + "|"
+                        res <- Async.RunSynchronously(server <? cmd) |> string
 
                     | Tweet(authorId, password, content) ->
-                        let cmd = "Tweet|" + authorId + "|" + password + "|" + content 
-                        server <? cmd |> Async.RunSynchronously
+                        // printfn "%s receive the tweet message from console and the content is : %s" authorId content
+                        cmd <- "Tweet|" + authorId + "|" + password + "|" + content + " |"
+                        // printfn "%s" cmd
+                        res <- Async.RunSynchronously(server <? cmd) |> string
 
-                    | ReTweet(userId, password, oldTweetId) ->
-                        let cmd = "ReTweet|" + userId + "|" + password + "|" + oldTweetId
-                        server <? cmd |> Async.RunSynchronously
+                    | ReTweet(userId, password, oldContent, oldAuthorId) ->
+                        printfn "%s receive the tweet message from console and the content is : %s" userId oldContent
+                        let cmd = "ReTweet|" + userId + "|" + password + "|" + oldContent + " |" + oldAuthorId
+                        res <- Async.RunSynchronously(server <? cmd) |> string
 
-                    | Query(arg0, arg1) ->
-                        let cmd = arg0 + "|" + arg1 + "|||" // arg0 = "Tag"/"Mention"
-                        server <? cmd |> Async.RunSynchronously
+                    | Query(x, arg) ->
+                        if x = 0 then 
+                            cmd <- "Query|" + arg + "|||" 
+                        
+                        elif x = 1 then 
+                            cmd <- "Tag|" + arg + "|||"
 
-                    | AutoQuery(userId) ->
-                        while logInStatus do
-                            let cmd = "Query|"  + userId + "|||" 
-                            server <? cmd |> ignore
-                            Thread.Sleep 10000   
+                        elif x = 2 then 
+                            cmd <- "Mention|" + arg + "|||"
 
+                        res <- Async.RunSynchronously(server <? cmd) |> string
+
+                    | AutoQuery(userId) -> ()
+                        // while logInStatus do
+                        //     let cmd = "Query|"  + userId + "|||" 
+                        //     server <? cmd |> ignore
+                        //     Thread.Sleep 50000   
+
+                    sender <? res |> ignore
+                    // printf "%A" res
                     return! loop()
                 }
             loop()  
 
+let args : string array = fsi.CommandLineArgs |> Array.tail
+let mutable numClients = args.[0] |> int
+
 let test() = 
-    let size = 10
-    let mid = size / 2
     let rand = System.Random()
-    
-    // Calcuate the frequency of users base on zipf distribution : P(r) = C / (rank^gama), where C and gama are factors and r is rank of requency.
+    let mutable logInStaMap = new Map<String, Boolean>([])
+    let mutable reTweetMap = new Map<String, String list>([])
+    let mutable subscribeMap = new Map<String, String list>([])    
+        
+    printfn "-------------calculate the zipf distributions-----------"
     let mutable zipfMap = new Map<int, int>([]) // Map<index, zipfNumber> zipfNumber is the number that this user index be subscribed and 
     let C = 5
     let gama = 1.5
 
-    let mutable logInStaMap = new Map<String, Boolean>([])
-    // All account need to be registered fistly and then log in
-    for i = 0 to size do
-        let id = "user" + string i
-        let client = system.ActorSelection(id)
-        let password = id + "_password" + string i
-        client <? Register(id, password) |> ignore // change command
-        Thread.Sleep 20
-
-        client <? LogIn(id, password) |> ignore
-        logInStaMap <- logInStaMap.Add(id, true)
-
+    for i = 1 to numClients do 
         let rank = float i
-        let zipfNum = int (float(size * C) / (rank ** gama))       
+        let zipfNum = int (float(numClients * C) / (rank ** gama))       
         zipfMap <- zipfMap.Add(i, zipfNum)
 
-    // Arrange the followers for each account on condition of zipf distribution.
-    for i = 0 to size do 
-        let followers : HashSet<int> = new HashSet<int>();
-        let zipfNum = zipfMap.Item(i)
-        let mutable j = 0
-        while j < zipfNum do
-            let mutable r = rand.Next() % size
-            while (r.Equals i || followers.Contains(r)) do   
-                r <- rand.Next() % size
-            let followerId = "user" + string i
-            let password = followerId + "_password" + string i
-            let followUserId = "user" + string r
-            let follower = system.ActorSelection(followerId)
-            follower <? Follow(followerId, password, followUserId) |> ignore
-            followers.Add(r) |> ignore
+        let zip = zipfMap.Item(i)
+        printfn "the zip num for %i is : %i" i zip
 
-        Thread.Sleep 10
+    printfn "--------------Register Users----------------"
 
-    let modNum = (size % 10) + 1
-    for i = 0 to size do 
-        let authorId = "user" + string i
-        let password = authorId + "_password" + string i
-        let zipfNum = zipfMap.Item(i)
-        let tweetNum = int(0.7 * float(zipfNum))
-        let mutable j = 0
-        while j < tweetNum do
-            let client = system.ActorSelection(authorId)
-            let x = j % modNum
-            if x = 0 then 
-                let oldContent = "this is a retweet! "    // map.get the subscribers and then get the tweet list then extract the content.
-                client <? ReTweet(authorId, password, oldContent) |> ignore
-            else 
-                let content = "This is a tweet content from " + authorId + " and index is : " + "j"
-                client <? Tweet(content, authorId) |> ignore
-    
+    // register users
+    for i = 1 to numClients do
+        let userId = "user" + string i
+        client userId |> ignore
+        let client = system.ActorSelection(url + userId)
+        let password = userId + "_password"
+        let res = Async.RunSynchronously(client <? Register(userId, password)) |> string
+        printfn "%s" res // need cast the response to string to print
+        Thread.Sleep 5
 
-    for i = 0 to 1000 do   // A random number you could choose to test connecting and disconnecting.
-        let r = rand.Next() % size
-        let userId = "user" + string r
-        let password = userId + "_password" + string r
-        let client = system.ActorSelection(userId)
-        if logInStaMap.Item(userId) then 
-            client <? LogOut(userId) |> ignore
+    printfn "--------------Login Users----------------"
 
-        else 
-            client <? LogIn(userId, password) |> ignore
-
-    
-
-
-
-
-
-
-
-
-
-
+    for i = 1 to numClients do
+        let userId = "user" + string i
+        let client = system.ActorSelection(url + userId)
+        let password = userId + "_password"
+        let res = Async.RunSynchronously(client <? LogIn(userId, password)) |> string
+        printfn "%s" res // need cast the response to string to print
+        Thread.Sleep 5
         
+    printfn "-------------Follow Users----------------"
+
+    for i = 1 to numClients do 
+       let followers : int Set = Set.empty       
+       let followerId = "user" + string i
+       let password = followerId + "_password"
+       let client = system.ActorSelection(url + followerId)
+       let zipfNum = zipfMap.Item(i)
+        
+       for j = 1 to zipfNum do
+           let mutable r = rand.Next() % numClients        
+           while (r.Equals i || followers.Contains(r)) do   
+               r <- rand.Next() % numClients          
+           // printf "the one follower of user%i is : %i" i r
+           let toFollowId = "user" + string r
+           let res = Async.RunSynchronously(client <? Follow(followerId, password, toFollowId)) |> string
+           printf "%s" res
+           Thread.Sleep 5
+           followers.Add(r) |> ignore
+           if not (subscribeMap.ContainsKey(followerId)) then
+               subscribeMap <- subscribeMap.Add(followerId, List.empty)
+            
+           subscribeMap <- subscribeMap.Add(followerId, List.append subscribeMap.[followerId] [toFollowId])      
+
+
+    printfn "--------------Tweet----------------"
+
+    for i = 1 to numClients do
+        let userId = "user" + string i
+        let client = system.ActorSelection(url + userId)
+        let password = userId + "_password"
+        let tweetNum = zipfMap.Item(i)
+        for j = 1 to tweetNum do
+            let index = string j
+            let content = "This is a tweet and index is " + index + "from "  + userId
+            let res = Async.RunSynchronously(client <? Tweet(userId, password, content)) |> string
+            printfn "%s" res // need cast the response to string to print
+            Thread.Sleep 5
+
+    printfn "--------------ReTweet----------------"
+
+    for i = 2 to numClients do
+        let userId = "user" + string i
+        let lastUser = "user" + string (i - 1)
+        let client = system.ActorSelection(url + userId)
+        let password = userId + "_password"
+        let res = Async.RunSynchronously(client <? ReTweet(userId, password, "This is a tweet from " + lastUser, lastUser )) |> string
+        printfn "%s" res // need cast the response to string to print
+        Thread.Sleep 5
+
+let stopWatch = System.Diagnostics.Stopwatch.StartNew()
+test()
+stopWatch.Stop()
+printfn "----------------RunningTime----------------"
+printfn "%f ms" stopWatch.Elapsed.TotalMilliseconds
