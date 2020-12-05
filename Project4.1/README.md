@@ -168,6 +168,66 @@ The file contains stopwatch to collect the time of each operation with dependenc
 
 ### Result
 
+#### Response
+```
+-------------calculate the zipf distributions-----------
+the zip num for 1 is : 10
+.........................
+--------------Register Users----------------
+user1 Registered successfully
+.........................
+--------------Login Users----------------
+True
+.........................
+-------------Follow Users----------------
+user1 successfully followed user2
+.........................
+--------------Tweet----------------
+#Tag1 This is a tweet and index is 1 from user1 @user1
+Tweet success!
+TweetID: 132516163646311290
+Content: #Tag1 This is a tweet and index is 1 from user1 @user1 
+ Author: user1
+.........................
+--------------ReTweet----------------
+user2 receive the tweet message from console and the content is : This is a tweet from user1
+ReTweet success!
+TweetID: 132516163647196520
+Content: This is a tweet from user1 
+ Author: user2
+Retweet from: user1
+.........................
+--------------UserId Query----------------
+TweetID: 132516165186756800
+Content: #Tag1 This is a tweet and index is 1 from user1 @user1 
+ Author: user1
+.........................
+--------------Tag Query----------------
+TweetID: 132516163646311290
+Content: #Tag1 This is a tweet and index is 1 from user1 @user1 
+ Author: user1
+.........................
+--------------Mentioned Query----------------
+TweetID: 132516163646311290
+Content: #Tag1 This is a tweet and index is 1 from user1 @user1 
+ Author: user1
+.........................
+--------------Logout----------------
+True
+.........................
+----------------RunningTime Measuring----------------
+the Registration time is : 47.691600 ms
+the Log In time is : 40.311100 ms
+the Follow time is : 271.041300 ms
+the Tweet time is : 281.207400 ms
+the ReTweet time is : 26.871300 ms
+the UserId Query runing time is : 41.704600 ms
+the Tag Query runing time is : 35.205800 ms
+the Mentioned Query runing time is : 33.962000 ms
+```
+
+### Figures
+
 ## Service Logic Test using `Test.fsx`
 
 ### How to test?
@@ -224,6 +284,8 @@ Tweet response for "user1": "Success"
 Tweet response for "user3": "Success" 
 ReTweet response for "user2": "Success" 
 ReTweet response for "user3": "Success" 
+LogOut response for "user1": true 
+LogOut response for "user4": false 
 ```
 #### Query feature
 Query for hashtag:
@@ -437,6 +499,13 @@ val it : Map<string,Tweet list> =
                             Content = "#uf Go Gators! @user3 ";
                             ReTweet = "user1";
                             TweetId = "132515239516988390";}])]
+```
+
+The `liveUser` will be:
+```F#
+> liveUser;;
+
+val it : Set<System.String> = set ["user2"; "user3"]
 ```
 
 Users fields

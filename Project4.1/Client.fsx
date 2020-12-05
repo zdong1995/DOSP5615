@@ -54,8 +54,10 @@ let client (name : string) =
                             client <? AutoQuery(userId) |> ignore
 
                     | LogOut(userId) ->
+                        cmd <- "Logout|" + userId + "|||"
+                        res <- Async.RunSynchronously(server <? cmd) |> string
                         logInStatus <- false
-                        // TODO
+                        
                     
                     | Register(userId, password) ->
                         // printfn "%s receive the reg message from console" userId
@@ -190,7 +192,7 @@ let test() =
 
     watch.Stop()
     fTime <- watch.Elapsed.TotalMilliseconds
-
+    
     printfn "--------------Tweet----------------"
 
     let watch = System.Diagnostics.Stopwatch.StartNew()
@@ -271,6 +273,14 @@ let test() =
     mqWatch.Stop()
     mqTime <- mqWatch.Elapsed.TotalMilliseconds
 
+    printfn "--------------Logout----------------"
+    let mqWatch = System.Diagnostics.Stopwatch.StartNew()
+    for i = 1 to numClients do
+        let userId = "user" + string i
+        let client = system.ActorSelection(url + userId)
+        let res4 = Async.RunSynchronously(client <? LogOut(userId)) |> string
+        printfn "%s" res4
+        Thread.Sleep 5
 
 test()
 printfn "----------------RunningTime Measuring----------------"

@@ -22,6 +22,7 @@ let mutable tweetTable = new Map<string, Tweet>([])
 let mutable userTable = new Map<string, User>([])
 let mutable tagTable = new Map<string, Tweet list>([])
 let mutable mentionTable = new Map<string, Tweet list>([])
+let mutable liveUser = new Set<String>([])
 
 // extract all hashtags in the tweet content to return tags list
 let ExtractTag(word: string, tag: char) =
@@ -74,6 +75,14 @@ type Simulator() =
         let mutable response = false
         if userTable.ContainsKey(username)
             && (userTable.[username].Password = password) then
+            liveUser <- liveUser.Add username
+            response <- true
+        response
+
+    member this.Logout(username: string) =
+        let mutable response = false
+        if liveUser.Contains(username) then
+            liveUser <- liveUser.Remove username
             response <- true
         response
 
@@ -154,11 +163,14 @@ type Simulator() =
     member this.QuerySubscribed(username: string) =
         // assumtion: username will be valid and exist in userTable
         let mutable response = ""
-        let user = this.GetUser(username)
-        let followingList = user.GetSubscribingList()
+        if not (liveUser.Contains(username)) then
+            response <- "Error! Please login and retry!"
+        else
+            let user = this.GetUser(username)
+            let followingList = user.GetSubscribingList()
 
-        for i in followingList do
-            response <- response + SerializeList(i.GetTweetList())
+            for i in followingList do
+                response <- response + SerializeList(i.GetTweetList())
         response
 
     // query of all tweets that user was mentioned, not need login
@@ -208,6 +220,24 @@ let LoginHandler =
                 | MsgAccount(username, password) ->
                     let response = Simulator.Login(username, password)
                     // printfn "Login response for %A: %A " username response |> string
+                    sender <? response |> ignore
+                | _ -> failwith "Exception"
+                return! loop ()
+            }
+        loop ()
+
+let LogOutHandler =
+    spawn system "LogOutHandler"
+    <| fun mailbox ->
+        let rec loop () =
+            actor {
+                let! message = mailbox.Receive()
+                let sender = mailbox.Sender()
+
+                match box message :?> Message with
+                | MsgAccount(username, "") ->
+                    let response = Simulator.Logout(username)
+                    // printfn "LogOut response for %A: %A " username response |> string
                     sender <? response |> ignore
                 | _ -> failwith "Exception"
                 return! loop ()
@@ -354,6 +384,9 @@ let APIsHandler =
                     | "Login" ->
                         handler <- system.ActorSelection(url + "LoginHandler")
                         msg <- MsgAccount(username, password)
+                    | "Logout" ->
+                        handler <- system.ActorSelection(url + "LogOutHandler")
+                        msg <- MsgAccount(username, "")
                     | "Follow" ->
                         handler <- system.ActorSelection(url + "FollowHandler")
                         msg <- MsgFollow(username, password, arg1)

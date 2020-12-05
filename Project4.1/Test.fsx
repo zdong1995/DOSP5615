@@ -42,6 +42,9 @@ let main() =
     service <? "Query|user1|||" |> Async.Ignore |> Async.RunSynchronously |> ignore
     service <? "Tag|#dosp|||" |> Async.Ignore |> Async.RunSynchronously |> ignore
     service <? "Mention|user3|||" |> Async.Ignore |> Async.RunSynchronously |> ignore
+    // Logout
+    service <? "Logout|user1|||" |> ignore
+    service <? "Logout|user4|||" |> ignore
 main()
 
 // User Class API test
