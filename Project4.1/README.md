@@ -135,7 +135,7 @@ service <? "Mention|user3|||" |> Async.Ignore |> Async.RunSynchronously |> ignor
 
 The test workflow is showed as following:
 
-![](https://github.com/zdong1995/DOSP5615/blob/twitter/Project4.1/img/Workflow.jpg)
+![](https://github.com/zdong1995/DOSP5615/blob/master/Project4.1/img/Workflow.jpg)
 
 There are two ways to run the test for this simulator:
 
