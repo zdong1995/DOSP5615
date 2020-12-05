@@ -41,7 +41,7 @@ let client (name : string) =
                     let mutable cmd = ""
                     let mutable res = ""
                     match box message :?> ClientMsg with
-                    
+
                     | LogIn(userId, password) ->
                         // printfn "%s receive the login message from console" userId
                         cmd <- "Login|" + userId + "|" + password + "||"
@@ -56,7 +56,7 @@ let client (name : string) =
                     | LogOut(userId) ->
                         logInStatus <- false
                         // TODO
-
+                    
                     | Register(userId, password) ->
                         // printfn "%s receive the reg message from console" userId
                         cmd <- "Register|" + userId + "|" + password + "||"
@@ -79,7 +79,6 @@ let client (name : string) =
                         res <- Async.RunSynchronously(server <? cmd) |> string
 
                     | Query(x, arg) ->
-                        let mutable cmd = ""
                         if x = 0 then 
                             cmd <- "Query|" + arg + "|||" 
                         
@@ -91,7 +90,7 @@ let client (name : string) =
 
                         res <- Async.RunSynchronously(server <? cmd) |> string
 
-                    | AutoQuery(userId) ->
+                    | AutoQuery(userId) -> ()
                         // while logInStatus do
                         //     let cmd = "Query|"  + userId + "|||" 
                         //     server <? cmd |> ignore
@@ -146,7 +145,7 @@ for i = 2 to 10 do
     let lastUser = "user" + string (i - 1)
     let client = system.ActorSelection(url + userId)
     let password = userId + "_password"
-    let res = Async.RunSynchronously(client <? ReTweet(userId, password, "This is a tweet from" + lastUser, lastUser )) |> string
+    let res = Async.RunSynchronously(client <? ReTweet(userId, password, "This is a tweet from " + lastUser, lastUser )) |> string
     printfn "%s" res // need cast the response to string to print
     Thread.Sleep 20
 
