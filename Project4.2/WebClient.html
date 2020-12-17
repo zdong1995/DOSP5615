@@ -1,0 +1,123 @@
+<script src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js'></script><!DOCTYPE html>
+
+<meta charset="utf-8" />
+
+<title>WebSocket Test</title>
+
+<body>
+  <div id = "Enter">
+    <input type = "text" placeholder="command" size="100">
+    <a href = "javascript:;">Enter</a>  
+  </div>
+
+  <script language="javascript" type="text/javascript">
+
+    var wsUri = "ws://localhost:8080/websocket";
+    var output;
+
+    function init()
+    {
+      output = document.getElementById("Enter");
+      testWebSocket();
+    }
+
+    function testWebSocket()
+    {
+      websocket = new WebSocket(wsUri);
+      websocket.onopen = function(evt) { onOpen(evt) };
+      websocket.onclose = function(evt) { onClose(evt) };
+      websocket.onmessage = function(evt) { onMessage(evt) };
+      websocket.onerror = function(evt) { onError(evt) };
+    }
+
+    function onOpen(evt)
+    {
+      writeToScreen("CONNECTED");
+    }
+
+    function onClose(evt)
+    {
+      writeToScreen("DISCONNECTED");
+    }
+
+    function onMessage(evt)
+    {
+      var jsonObj = eval('('+ evt.data+')');
+      var resType = jsonObj.ResType;
+      var resContent = jsonObj.ResContent;
+      writeToScreen('<span style="color: blue;">RESPONSE: ' + resContent + '</span>');
+    }
+
+    function onError(evt)
+    {
+      writeToScreen('<span style="color: red;">ERROR:</span> ' + evt.data);
+    }
+
+    function doSend(message)
+    {
+      writeToScreen("SENT: " + message); 
+      websocket.send(message);
+    }
+
+    function writeToScreen(message)
+    {
+      var pre = document.createElement("p");
+      pre.style.wordWrap = "break-word";
+      pre.innerHTML = message;
+      output.appendChild(pre);
+    }
+
+    window.addEventListener("load", init, false);        
+
+    $('#Enter > a').on('click', function() {
+      var oriCmd = $('#Enter > input').val();
+      var words = oriCmd.split('|');
+      var operation = words[0];
+      var userId = "";
+      var passWord = "";
+      var toFollowId = "";
+      var tweetContent = "";
+      var oriAuthor = "";
+      var queryTag = "";
+      
+      if (operation == "Register" || operation == "Login" || operation == "Follow" || operation == "Tweet" || operation == "ReTweet") {
+        userId = words[1]
+        passWord = words[2];  
+      }
+      
+      if (operation == "Follow") {
+        toFollowId = words[3];
+      }
+
+      if (operation == "Tweet" || operation == "ReTweet") {
+        tweetContent = words[3];
+      }
+
+      if (operation == "ReTweet") {
+        oriAuthor = words[4];
+      }
+
+      if (operation == "Query" || operation == "Mention") {
+        userId = words[1];
+      }
+
+      if (operation == "Tag") {
+        queryTag = words[1];
+      }
+
+      var jsonScript = {
+        "Operation" : operation,
+        "Content" : {
+          "UserID" : userId, 
+          "PassWord" : passWord,
+          "ToFollowId" : toFollowId,
+          "TweetContent" : tweetContent,
+          "OriAuthor" : oriAuthor,
+          "QueryTag" : queryTag
+        }
+      };
+      
+      websocket.send(JSON.stringify(jsonScript));
+    })
+  </script>
+</body>>

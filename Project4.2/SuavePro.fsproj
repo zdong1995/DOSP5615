@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>WebSocket</AssemblyName>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net5.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="SocketSample.fsx" />
+    <Compile Include="Data.fsx" />
+    <Compile Include="WebServer.fsx" />
+    <Compile Include="Actor.fsx" />
+    <Compile Include="WebSocket.fsx" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Akka" Version="1.4.13" />
+    <PackageReference Include="Akka.FSharp" Version="1.4.13" />
+    <PackageReference Include="Akka.Remote" Version="1.4.13" />
+    <PackageReference Include="Akka.TestKit" Version="1.4.13" />
+    <PackageReference Include="FSharp.Data" Version="3.3.3" />
+    <PackageReference Include="FSharp.Json" Version="0.4.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    <PackageReference Include="Suave" Version="2.6.0" />
+    <PackageReference Include="WebSocketSharp" Version="1.0.3-rc11" />
+  </ItemGroup>
+</Project>

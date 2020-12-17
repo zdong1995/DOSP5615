@@ -126,12 +126,12 @@ let test() =
         
     printfn "-------------calculate the zipf distributions-----------"
     let mutable zipfMap = new Map<int, int>([]) // Map<index, zipfNumber> zipfNumber is the number that this user index be subscribed and 
-    let C = 5
+    let C = 0.75
     let gama = 1.5
 
     for i = 1 to numClients do 
         let rank = float i
-        let zipfNum = int (float(numClients * C) / (rank ** gama))       
+        let zipfNum = int (float(float numClients * C) / (rank ** gama))       
         zipfMap <- zipfMap.Add(i, zipfNum)
 
         let zip = zipfMap.Item(i)
@@ -192,7 +192,11 @@ let test() =
 
     watch.Stop()
     fTime <- watch.Elapsed.TotalMilliseconds
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> twitter
     printfn "--------------Tweet----------------"
 
     let watch = System.Diagnostics.Stopwatch.StartNew()
@@ -200,7 +204,7 @@ let test() =
         let userId = "user" + string i
         let client = system.ActorSelection(url + userId)
         let password = userId + "_password"
-        let tweetNum = zipfMap.Item(i)
+        let tweetNum = int (6.6 * float (zipfMap.Item(i)))
         for j = 1 to tweetNum do
             let index = string j
             let tagContent = "#Tag" + string (i % 5)
@@ -273,6 +277,7 @@ let test() =
     mqWatch.Stop()
     mqTime <- mqWatch.Elapsed.TotalMilliseconds
 
+<<<<<<< HEAD
     printfn "--------------Logout----------------"
     let mqWatch = System.Diagnostics.Stopwatch.StartNew()
     for i = 1 to numClients do
@@ -281,6 +286,8 @@ let test() =
         let res4 = Async.RunSynchronously(client <? LogOut(userId)) |> string
         printfn "%s" res4
         Thread.Sleep 5
+=======
+>>>>>>> twitter
 
 test()
 printfn "----------------RunningTime Measuring----------------"
