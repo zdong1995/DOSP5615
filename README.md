@@ -68,7 +68,7 @@ The requests are all processed
 the ave of this algo is 1.000000
 ```
 
-### [Project 4.1: Twitter Enginee Clone](https://github.com/zdong1995/DOSP5615/tree/twitter/Project4.1)
+## [Project 4.1: Twitter Enginee Clone](https://github.com/zdong1995/DOSP5615/tree/twitter/Project4.1)
 
 Twitter Enginee Clone using F# and Akka with support to following functionality was designed:
 - Register account and Authenticatios
@@ -88,6 +88,12 @@ Also a tester/simulator to test the above was implemented with support to:
 
 ### Workflow
 ![](https://github.com/zdong1995/DOSP5615/blob/master/Project4.1/img/Workflow.jpg)
+
+## [Project 4.2: Twitter Enginee Clone WebSocket](https://github.com/zdong1995/DOSP5615/tree/twitter/Project4.2)
+
+Credit to Xiaobai Li @leesunlion
+
+[Demo Video](https://www.youtube.com/watch?v=_NDVHhxO5DQ&feature=youtu.be)
 
 ## Reference
 1. "[Actor-based Concurrency with F# and Akka.NET](https://gist.github.com/akimboyko/e58e4bfbba3e9a551f05)" sample code [@Akim Boyko](https://gist.github.com/akimboyko)

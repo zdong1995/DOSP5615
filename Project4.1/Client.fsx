@@ -192,11 +192,6 @@ let test() =
 
     watch.Stop()
     fTime <- watch.Elapsed.TotalMilliseconds
-<<<<<<< HEAD
-    
-=======
-
->>>>>>> twitter
     printfn "--------------Tweet----------------"
 
     let watch = System.Diagnostics.Stopwatch.StartNew()
@@ -277,17 +272,6 @@ let test() =
     mqWatch.Stop()
     mqTime <- mqWatch.Elapsed.TotalMilliseconds
 
-<<<<<<< HEAD
-    printfn "--------------Logout----------------"
-    let mqWatch = System.Diagnostics.Stopwatch.StartNew()
-    for i = 1 to numClients do
-        let userId = "user" + string i
-        let client = system.ActorSelection(url + userId)
-        let res4 = Async.RunSynchronously(client <? LogOut(userId)) |> string
-        printfn "%s" res4
-        Thread.Sleep 5
-=======
->>>>>>> twitter
 
 test()
 printfn "----------------RunningTime Measuring----------------"
